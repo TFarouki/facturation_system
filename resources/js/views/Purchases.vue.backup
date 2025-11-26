@@ -1,0 +1,408 @@
+<template>
+  <q-page class="q-pa-md">
+    <div class="row items-center justify-between q-mb-md">
+      <div class="text-h4">Purchase Invoices</div>
+      <q-btn color="primary" icon="add" label="New Purchase" @click="showDialog = true" />
+    </div>
+
+    <q-table
+      :rows="invoices"
+      :columns="columns"
+      row-key="id"
+      :loading="loading"
+      flat
+      bordered
+      class="rounded-table"
+    >
+      <template v-slot:body-cell-image="props">
+        <q-td :props="props">
+          <q-btn v-if="props.row.invoice_image_path" flat dense icon="image" @click="viewImage(props.row.invoice_image_path)" />
+        </q-td>
+      </template>
+    </q-table>
+
+    <!-- Add Purchase Dialog -->
+    <q-dialog v-model="showDialog" persistent>
+      <q-card style="min-width: 600px; max-width: 90vw;">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">New Purchase Invoice</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit="savePurchase">
+            <div class="row q-col-gutter-md">
+              <div class="col-6">
+                <q-select
+                  v-model="form.supplier_id"
+                  :options="supplierOptions"
+                  option-value="value"
+                  option-label="label"
+                  label="Supplier *"
+                  outlined
+                  dense
+                  emit-value
+                  map-options
+                  use-input
+                  @filter="filterSuppliers"
+                  :rules="[val => !!val || !!form.supplier_name || 'Required']"
+                >
+                  <template v-slot:no-option>
+                    <q-item clickable @click="openSupplierDialog">
+                      <q-item-section class="text-primary">
+                        <q-icon name="add" /> Add New Supplier
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+              <div class="col-6">
+                <q-input v-model="form.invoice_number" label="Invoice Number *" outlined dense :rules="[val => !!val || 'Required']" />
+              </div>
+              <div class="col-6">
+                <q-input v-model="form.invoice_date" label="Invoice Date *" type="date" outlined dense :rules="[val => !!val || 'Required']" />
+              </div>
+              <div class="col-6">
+                <q-file v-model="form.invoice_image" label="Invoice Image" outlined dense accept="image/*">
+                  <template v-slot:prepend>
+                    <q-icon name="attach_file" />
+                  </template>
+                </q-file>
+              </div>
+              <div class="col-12">
+                <q-input v-model="form.notes" label="Notes" outlined dense type="textarea" rows="2" />
+              </div>
+            </div>
+
+            <div class="text-subtitle2 q-mt-md q-mb-sm">Items</div>
+            <div v-for="(item, index) in form.items" :key="index" class="row q-col-gutter-sm q-mb-sm">
+              <div class="col-4">
+                <q-select
+                  v-model="item.product_id"
+                  :options="productOptions"
+                  option-value="value"
+                  option-label="label"
+                  label="Product"
+                  outlined
+                  dense
+                  emit-value
+                  map-options
+                  use-input
+                  @filter="filterProducts"
+                >
+                  <template v-slot:no-option>
+                    <q-item clickable @click="openProductDialog">
+                      <q-item-section class="text-primary">
+                        <q-icon name="add" /> Add New Product
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+              <div class="col-3">
+                <q-input v-model.number="item.quantity" label="Quantity" type="number" outlined dense />
+              </div>
+              <div class="col-3">
+                <q-input v-model.number="item.purchase_price" label="Price" type="number" outlined dense />
+              </div>
+              <div class="col-2">
+                <q-btn flat dense icon="delete" color="negative" @click="() => removeItem(index)" />
+              </div>
+            </div>
+            <q-btn flat icon="add" label="Add Item" @click="addItem" class="q-mb-md" />
+
+            <!-- Total Amount Display -->
+            <div class="row justify-end q-mb-md">
+              <div class="text-h6">Total: {{ totalAmount.toFixed(2) }} DH</div>
+            </div>
+
+            <div class="row justify-end q-gutter-sm">
+              <q-btn label="Cancel" flat @click="closeDialog" />
+              <q-btn type="submit" label="Save" color="primary" :loading="saving" />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Quick Add Product Dialog -->
+    <q-dialog v-model="showProductDialog">
+      <q-card style="min-width: 600px">
+        <q-card-section class="bg-secondary text-white">
+          <div class="text-h6">Quick Add Product</div>
+        </q-card-section>
+
+        <q-card-section>
+                <q-input v-model="productForm.barcode" label="Barcode" outlined dense />
+              </div>
+              <div class="col-6">
+                <q-input v-model="productForm.unit_of_measure" label="Unit" outlined dense :rules="[val => !!val || 'Required']" />
+              </div>
+              <div class="col-6">
+                <q-input v-model.number="productForm.current_stock_quantity" label="Stock Quantity" type="number" outlined dense :rules="[val => val >= 0 || 'Must be positive']" />
+              </div>
+              <div class="col-6">
+                <q-input v-model.number="productForm.cmup_cost" label="CMUP Cost" type="number" outlined dense />
+              </div>
+              <div class="col-6">
+                <q-input v-model.number="productForm.tax_rate" label="Tax Rate %" type="number" outlined dense />
+              </div>
+            </div>
+            
+            <div class="text-subtitle2 q-mt-md q-mb-sm">Selling Prices</div>
+            <div class="row q-col-gutter-md">
+              <div class="col-4">
+                <q-input v-model.number="productForm.wholesale_price" label="Wholesale" type="number" outlined dense />
+              </div>
+              <div class="col-4">
+                <q-input v-model.number="productForm.semi_wholesale_price" label="Semi-Wholesale" type="number" outlined dense />
+              </div>
+              <div class="col-4">
+                <q-input v-model.number="productForm.retail_price" label="Retail" type="number" outlined dense />
+              </div>
+            </div>
+
+            <div class="row justify-end q-gutter-sm q-mt-md">
+              <q-btn label="Cancel" flat @click="showProductDialog = false" />
+              <q-btn type="submit" label="Save & Select" color="secondary" :loading="saving" />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Price Update Dialog -->
+    <q-dialog v-model="showPriceDialog">
+      <q-card style="min-width: 500px">
+        <q-card-section class="bg-warning text-white">
+          <div class="text-h6">Price Updates Required</div>
+        </q-card-section>
+
+        <q-card-section>
+          <div v-for="update in priceUpdates" :key="update.product_id" class="q-mb-md">
+            <div class="text-subtitle1">{{ update.product_name }}</div>
+            <div class="text-caption">New purchase cost: ${{ update.new_purchase_cost }}</div>
+            <div class="row q-col-gutter-sm q-mt-sm">
+              <div class="col-4">
+                <q-input v-model.number="update.wholesale_price" label="Wholesale" type="number" outlined dense />
+              </div>
+              <div class="col-4">
+                <q-input v-model.number="update.semi_wholesale_price" label="Semi-Wholesale" type="number" outlined dense />
+              </div>
+              <div class="col-4">
+                <q-input v-model.number="update.retail_price" label="Retail" type="number" outlined dense />
+              </div>
+            </div>
+          </div>
+
+          <div class="row justify-end q-gutter-sm q-mt-md">
+            <q-btn label="Skip" flat @click="showPriceDialog = false" />
+            <q-btn label="Update Prices" color="warning" @click="updatePrices" :loading="saving" />
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+  </q-page>
+</template>
+
+<script setup>
+  invoice_image: null,
+  items: [{ product_id: null, quantity: 0, purchase_price: 0 }],
+});
+
+const productForm = ref({
+  name: '',
+  product_description: '',
+  unit_of_measure: '',
+  current_stock_quantity: 0,
+  product_code: '',
+  barcode: '',
+  cmup_cost: 0,
+  tax_rate: 0,
+  category_id: null,
+  wholesale_price: 0,
+  semi_wholesale_price: 0,
+  retail_price: 0,
+});
+
+const columns = [
+  { name: 'invoice_number', label: 'Invoice #', field: 'invoice_number', align: 'left', sortable: true },
+  { name: 'supplier', label: 'Supplier', field: 'supplier_name', align: 'left' },
+  { name: 'date', label: 'Date', field: 'invoice_date', align: 'left' },
+  { name: 'image', label: 'Image', field: 'invoice_image_path', align: 'center' },
+];
+
+const loadInvoices = async () => {
+  loading.value = true;
+  try {
+    const response = await api.get('/purchases');
+    invoices.value = response.data;
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Failed to load invoices' });
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadProducts = async () => {
+  try {
+    const response = await api.get('/products');
+    products.value = response.data;
+    productOptions.value = response.data.map(p => ({ label: p.name, value: p.id }));
+  } catch (error) {
+    console.error('Failed to load products');
+  }
+};
+
+const loadCategories = async () => {
+  try {
+    const response = await api.get('/categories');
+    categories.value = response.data;
+  } catch (error) {
+    console.error('Failed to load categories');
+  }
+};
+
+const filterProducts = (val, update) => {
+  if (val === '') {
+    update(() => {
+      productOptions.value = products.value.map(p => ({ label: p.name, value: p.id }));
+    });
+    return;
+  }
+
+  update(() => {
+    const needle = val.toLowerCase();
+    productOptions.value = products.value
+      .filter(v => v.name.toLowerCase().indexOf(needle) > -1)
+      .map(p => ({ label: p.name, value: p.id }));
+  });
+};
+
+const openProductDialog = () => {
+  productForm.value = {
+    name: '',
+    unit_of_measure: '',
+    current_stock_quantity: 0,
+    product_code: '',
+    barcode: '',
+    cmup_cost: 0,
+    tax_rate: 0,
+    category_id: null,
+    wholesale_price: 0,
+    semi_wholesale_price: 0,
+    installment_price: 0,
+  };
+  showProductDialog.value = true;
+};
+
+const saveQuickProduct = async () => {
+  saving.value = true;
+  try {
+    const response = await api.post('/products', productForm.value);
+    const newProduct = response.data;
+    
+    // Refresh products list
+    await loadProducts();
+    
+    // Auto-select the new product in the last item row
+    const lastItemIndex = form.value.items.length - 1;
+    if (lastItemIndex >= 0) {
+      form.value.items[lastItemIndex].product_id = newProduct.id;
+    }
+    
+    $q.notify({ type: 'positive', message: 'Product created and selected' });
+    showProductDialog.value = false;
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Failed to create product' });
+  } finally {
+    saving.value = false;
+  }
+};
+
+const addItem = () => {
+  form.value.items.push({ product_id: null, quantity: 0, purchase_price: 0 });
+};
+
+const removeItem = (index) => {
+  form.value.items.splice(index, 1);
+};
+
+const savePurchase = async () => {
+  saving.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('supplier_name', form.value.supplier_name);
+    formData.append('invoice_number', form.value.invoice_number);
+    formData.append('invoice_date', form.value.invoice_date);
+    if (form.value.invoice_image) {
+      formData.append('invoice_image', form.value.invoice_image);
+    }
+    formData.append('items', JSON.stringify(form.value.items));
+
+    const response = await api.post('/purchases', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    $q.notify({ type: 'positive', message: 'Purchase invoice created' });
+    
+    if (response.data.price_updates_required?.length > 0) {
+      priceUpdates.value = response.data.price_updates_required;
+      showPriceDialog.value = true;
+    }
+    
+    closeDialog();
+    loadInvoices();
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.response?.data?.message || 'Failed to save purchase' });
+  } finally {
+    saving.value = false;
+  }
+};
+
+const updatePrices = async () => {
+  saving.value = true;
+  try {
+    for (const update of priceUpdates.value) {
+      await api.put(`/products/${update.product_id}/prices`, {
+        wholesale_price: update.wholesale_price,
+        semi_wholesale_price: update.semi_wholesale_price,
+        installment_price: update.installment_price,
+      });
+    }
+    $q.notify({ type: 'positive', message: 'Prices updated successfully' });
+    showPriceDialog.value = false;
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Failed to update prices' });
+  } finally {
+    saving.value = false;
+  }
+};
+
+const closeDialog = () => {
+  showDialog.value = false;
+  form.value = {
+    supplier_name: '',
+    invoice_number: '',
+    invoice_date: '',
+    invoice_image: null,
+    items: [{ product_id: null, quantity: 0, purchase_price: 0 }],
+  };
+};
+
+const viewImage = (path) => {
+  window.open(`http://localhost:8000/storage/${path}`, '_blank');
+};
+
+onMounted(() => {
+  loadInvoices();
+  loadProducts();
+  loadCategories();
+});
+</script>
+
+<style scoped>
+.rounded-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+</style>
