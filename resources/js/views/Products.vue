@@ -86,20 +86,62 @@
         <q-card-section>
           <q-form @submit="saveProduct">
             <div class="row q-col-gutter-md">
-              <!-- Product Name - Full Row -->
-              <div class="col-12">
+              <!-- Product Code and Name -->
+              <div class="col-4">
+                <q-input v-model="form.product_code" label="Product Code (رمز المنتج)" outlined dense />
+              </div>
+              <div class="col-8">
                 <q-input v-model="form.name" label="Product Name *" outlined dense :rules="[val => !!val || 'Required']" />
               </div>
               
-              <!-- Category and Barcode -->
+              <!-- Product Family and Category -->
+              <div class="col-6">
+                <q-select
+                  v-model="form.product_family_id"
+                  :options="filteredFamilies"
+                  option-value="id"
+                  :option-label="opt => opt.name_ar ? `${opt.name} (${opt.name_ar})` : opt.name"
+                  label="Product Family (عائلة المنتج)"
+                  outlined
+                  dense
+                  emit-value
+                  map-options
+                  use-input
+                  clearable
+                  @filter="filterFamilies"
+                  @new-value="createNewFamily"
+                  new-value-mode="add-unique"
+                >
+                  <template v-slot:no-option>
+                    <q-item clickable @click="openAddFamilyDialog">
+                      <q-item-section avatar>
+                        <q-icon name="add" color="primary" />
+                      </q-item-section>
+                      <q-item-section class="text-primary">
+                        Add new family
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                  <template v-slot:after-options>
+                    <q-item clickable @click="openAddFamilyDialog">
+                      <q-item-section avatar>
+                        <q-icon name="add" color="primary" />
+                      </q-item-section>
+                      <q-item-section class="text-primary">
+                        Add new family
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
               <div class="col-6">
                 <CategorySelect v-model="form.category_id" label="Category" />
               </div>
+              
+              <!-- Barcode and Unit -->
               <div class="col-6">
                 <q-input v-model="form.barcode" label="Barcode" outlined dense />
               </div>
-              
-              <!-- Unit and Stock Quantity -->
               <div class="col-6">
                 <q-select 
                   v-model="form.unit_id" 
@@ -114,7 +156,9 @@
                   :rules="[val => !!val || 'Required']" 
                 />
               </div>
-              <div class="col-6">
+              
+              <!-- Stock Quantity -->
+              <div class="col-12">
                 <q-input v-model.number="form.current_stock_quantity" label="Stock Quantity *" type="number" outlined dense :rules="[val => val >= 0 || 'Must be positive']" />
               </div>
               
@@ -227,6 +271,40 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Add Family Dialog -->
+    <q-dialog v-model="showAddFamilyDialog" persistent @show="focusFamilyNameInput">
+      <q-card style="min-width: 400px">
+        <q-card-section class="bg-secondary text-white">
+          <div class="text-h6">Add New Product Family</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit="saveNewFamily" class="q-gutter-md">
+            <q-input
+              ref="familyNameInputRef"
+              v-model="newFamilyForm.name"
+              label="Name (English) *"
+              outlined
+              dense
+              :rules="[val => !!val || 'Required']"
+            />
+
+            <q-input
+              v-model="newFamilyForm.name_ar"
+              label="Name (Arabic) الاسم بالعربية"
+              outlined
+              dense
+            />
+
+            <div class="row justify-end q-gutter-sm">
+              <q-btn label="Cancel" flat @click="showAddFamilyDialog = false" />
+              <q-btn type="submit" label="Save" color="secondary" :loading="savingFamily" />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -240,10 +318,14 @@ import TaxSelect from '../components/TaxSelect.vue';
 const $q = useQuasar();
 const products = ref([]);
 const units = ref([]);
+const families = ref([]);
+const filteredFamilies = ref([]);
 const loading = ref(false);
 const saving = ref(false);
+const savingFamily = ref(false);
 const showDialog = ref(false);
 const showPriceDialog = ref(false);
+const showAddFamilyDialog = ref(false);
 const editMode = ref(false);
 const selectedProduct = ref(null);
 const settings = ref({
@@ -251,16 +333,24 @@ const settings = ref({
   retail_percentage: 0,
 });
 
+const newFamilyForm = ref({
+  name: '',
+  name_ar: '',
+});
+const familyNameInputRef = ref(null);
+
 // Table features
 const searchText = ref('');
 const showActionsColumn = ref(true);
-const visibleColumns = ref(['category', 'unit', 'stock', 'cmup', 'wholesale', 'retail', 'tax']);
+const visibleColumns = ref(['product_code', 'product_family', 'category', 'unit', 'stock', 'cmup', 'wholesale', 'semi_wholesale', 'retail', 'tax']);
 const pagination = ref({
   rowsPerPage: 10
 });
 
 const form = ref({
   name: '',
+  product_code: '',
+  product_family_id: null,
   product_description: '',
   unit_id: null,
   current_stock_quantity: 0,
@@ -279,12 +369,15 @@ const priceForm = ref({
 });
 
 const columns = [
+  { name: 'product_code', label: 'Code', field: 'product_code', align: 'left', sortable: true },
   { name: 'name', label: 'Product Name', field: 'name', align: 'left', sortable: true },
+  { name: 'product_family', label: 'Family', field: row => row.product_family?.name || row.product_family || '-', align: 'left', sortable: true },
   { name: 'category', label: 'Category', field: row => row.category?.name || '-', align: 'left', sortable: true },
   { name: 'unit', label: 'Unit', field: row => row.unit?.unit_name_ar || '-', align: 'left', sortable: true },
   { name: 'stock', label: 'Stock', field: row => row.current_stock_quantity || 0, align: 'right', sortable: true, format: val => Math.floor(val) },
   { name: 'cmup', label: 'CMUP', field: row => row.cmup_cost || 0, align: 'right', sortable: true, format: val => `${val} DH` },
   { name: 'wholesale', label: 'Wholesale', field: row => row.current_price?.wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
+  { name: 'semi_wholesale', label: 'Semi-Wholesale', field: row => row.current_price?.semi_wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
   { name: 'retail', label: 'Retail', field: row => row.current_price?.retail_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
   { name: 'tax', label: 'Tax', field: row => row.current_price?.tax_rate || 0, align: 'right', sortable: true, format: val => `${val}%` },
   { name: 'actions', label: 'Actions', field: 'actions', align: 'center', sortable: false },
@@ -313,6 +406,8 @@ const filteredProducts = computed(() => {
     filtered = filtered.filter(product => {
       return (
         product.name?.toLowerCase().includes(search) ||
+        product.product_code?.toLowerCase().includes(search) ||
+        product.product_family?.toLowerCase().includes(search) ||
         product.category?.name?.toLowerCase().includes(search) ||
         product.unit?.unit_name_ar?.toLowerCase().includes(search) ||
         product.unit?.unit_name_en?.toLowerCase().includes(search) ||
@@ -357,6 +452,78 @@ const loadUnits = async () => {
   }
 };
 
+const loadFamilies = async () => {
+  try {
+    const response = await api.get('/product-families');
+    families.value = response.data;
+    filteredFamilies.value = response.data;
+  } catch (error) {
+    console.error('Failed to load families');
+  }
+};
+
+const filterFamilies = (val, update) => {
+  update(() => {
+    if (!val) {
+      filteredFamilies.value = families.value;
+    } else {
+      const needle = val.toLowerCase();
+      filteredFamilies.value = families.value.filter(f => 
+        f.name?.toLowerCase().includes(needle) ||
+        f.name_ar?.includes(needle)
+      );
+    }
+  });
+};
+
+const createNewFamily = (val, done) => {
+  // This is called when user types and presses enter
+  // We'll open the dialog instead
+  if (val.length > 0) {
+    newFamilyForm.value.name = val;
+    openAddFamilyDialog();
+  }
+  done(null); // Don't add the value directly
+};
+
+const openAddFamilyDialog = () => {
+  showAddFamilyDialog.value = true;
+};
+
+const focusFamilyNameInput = () => {
+  setTimeout(() => {
+    familyNameInputRef.value?.focus();
+  }, 100);
+};
+
+const saveNewFamily = async () => {
+  if (!newFamilyForm.value.name) return;
+  
+  savingFamily.value = true;
+  try {
+    const response = await api.post('/product-families', newFamilyForm.value);
+    const newFamily = response.data;
+    
+    // Add to families list
+    families.value.push(newFamily);
+    filteredFamilies.value = [...families.value];
+    
+    // Select the new family
+    form.value.product_family_id = newFamily.id;
+    
+    // Close dialog and reset form
+    showAddFamilyDialog.value = false;
+    newFamilyForm.value = { name: '', name_ar: '' };
+    
+    $q.notify({ type: 'positive', message: 'Family created successfully' });
+  } catch (error) {
+    console.error('Failed to create family:', error);
+    $q.notify({ type: 'negative', message: 'Failed to create family' });
+  } finally {
+    savingFamily.value = false;
+  }
+};
+
 const loadSettings = async () => {
   try {
     const response = await api.get('/settings');
@@ -391,6 +558,8 @@ const editProduct = (product) => {
   selectedProduct.value = product;
   form.value = {
     name: product.name,
+    product_code: product.product_code || '',
+    product_family_id: product.product_family_id || null,
     product_description: product.product_description || '',
     unit_id: product.unit_id,
     current_stock_quantity: product.current_stock_quantity,
@@ -413,6 +582,8 @@ const closeProductDialog = () => {
   
   form.value = {
     name: '',
+    product_code: '',
+    product_family_id: null,
     product_description: '',
     unit_id: pieceUnit?.id || null,
     current_stock_quantity: 0,
@@ -436,6 +607,8 @@ const saveProduct = async () => {
       // Create product with optional pricing
       const productData = {
         name: form.value.name,
+        product_code: form.value.product_code,
+        product_family_id: form.value.product_family_id,
         product_description: form.value.product_description,
         unit_id: form.value.unit_id,
         current_stock_quantity: form.value.current_stock_quantity,
@@ -512,6 +685,7 @@ const exportToExcel = () => {
       'Stock': Math.floor(product.current_stock_quantity || 0),
       'CMUP (DH)': product.cmup_cost || 0,
       'Wholesale (DH)': product.current_price?.wholesale_price || 0,
+      'Semi-Wholesale (DH)': product.current_price?.semi_wholesale_price || 0,
       'Retail (DH)': product.current_price?.retail_price || 0,
       'Tax (%)': product.current_price?.tax_rate || 0,
       'Barcode': product.barcode || '-',
@@ -550,6 +724,7 @@ const exportToExcel = () => {
 onMounted(() => {
   loadProducts();
   loadUnits();
+  loadFamilies();
   loadSettings();
 });
 </script>

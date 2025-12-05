@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductPrice;
+use App\Models\DistributionOrderDetail;
+use App\Models\DistributionOrder;
+use App\Models\SalesDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +15,51 @@ class ProductController extends Controller
 {
     public function index()
     {
-        return response()->json(Product::with(['currentPrice', 'category', 'unit'])->get());
+        $products = Product::with(['currentPrice', 'category', 'unit', 'productFamily'])->get();
+        
+        // Get all product IDs
+        $productIds = $products->pluck('id')->toArray();
+        
+        // Calculate delivery quantities (sortie) for all products in one query
+        $deliveryQuantities = DB::table('distribution_order_details')
+            ->join('distribution_orders', 'distribution_order_details.order_id', '=', 'distribution_orders.id')
+            ->where('distribution_orders.order_type', 'sortie')
+            ->whereNull('distribution_orders.deleted_at')
+            ->whereIn('distribution_order_details.product_id', $productIds)
+            ->select('distribution_order_details.product_id', DB::raw('SUM(distribution_order_details.quantity) as total'))
+            ->groupBy('distribution_order_details.product_id')
+            ->pluck('total', 'product_id')
+            ->toArray();
+        
+        // Calculate return quantities (entree) for all products in one query
+        $returnQuantities = DB::table('distribution_order_details')
+            ->join('distribution_orders', 'distribution_order_details.order_id', '=', 'distribution_orders.id')
+            ->where('distribution_orders.order_type', 'entree')
+            ->whereNull('distribution_orders.deleted_at')
+            ->whereIn('distribution_order_details.product_id', $productIds)
+            ->select('distribution_order_details.product_id', DB::raw('SUM(distribution_order_details.quantity) as total'))
+            ->groupBy('distribution_order_details.product_id')
+            ->pluck('total', 'product_id')
+            ->toArray();
+        
+        // Calculate sold quantities for all products in one query
+        $soldQuantities = SalesDetail::whereIn('product_id', $productIds)
+            ->select('product_id', DB::raw('SUM(quantity) as total'))
+            ->groupBy('product_id')
+            ->pluck('total', 'product_id')
+            ->toArray();
+        
+        // Calculate committed quantity for each product
+        foreach ($products as $product) {
+            $deliveryQty = floatval($deliveryQuantities[$product->id] ?? 0);
+            $returnQty = floatval($returnQuantities[$product->id] ?? 0);
+            $soldQty = floatval($soldQuantities[$product->id] ?? 0);
+            
+            // Committed quantity = delivered - returned - sold
+            $product->committed_quantity = max(0, $deliveryQty - $returnQty - $soldQty);
+        }
+        
+        return response()->json($products);
     }
 
     public function store(Request $request)
@@ -61,7 +108,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        return response()->json($product->load('currentPrice', 'category', 'unit'));
+        return response()->json($product->load('currentPrice', 'category', 'unit', 'productFamily'));
     }
 
     public function update(Request $request, Product $product)
@@ -126,6 +173,180 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Failed to update prices'], 500);
+        }
+    }
+
+    public function stockHistory(Product $product)
+    {
+        try {
+            $twelveMonthsAgo = now()->subMonths(12)->startOfMonth();
+            
+            // Get purchase details for this product in the last 12 months
+            $purchases = DB::table('purchase_details')
+                ->join('purchase_invoices', 'purchase_details.invoice_id', '=', 'purchase_invoices.id')
+                ->where('purchase_details.product_id', $product->id)
+                ->where('purchase_invoices.invoice_date', '>=', $twelveMonthsAgo)
+                ->select(
+                    DB::raw('DATE_FORMAT(purchase_invoices.invoice_date, "%Y-%m") as month'),
+                    DB::raw('SUM(purchase_details.quantity) as total_quantity')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
+
+            // Get sales details for this product in the last 12 months
+            $sales = DB::table('sales_details')
+                ->join('sales_receipts', 'sales_details.receipt_id', '=', 'sales_receipts.id')
+                ->where('sales_details.product_id', $product->id)
+                ->where('sales_receipts.receipt_date', '>=', $twelveMonthsAgo)
+                ->select(
+                    DB::raw('DATE_FORMAT(sales_receipts.receipt_date, "%Y-%m") as month'),
+                    DB::raw('SUM(sales_details.quantity) as total_quantity')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
+
+            // Get cycle movements for this product (load/reload subtract, return adds)
+            $cycleMovements = DB::table('cycle_movements')
+                ->where('cycle_movements.product_id', $product->id)
+                ->where('cycle_movements.created_at', '>=', $twelveMonthsAgo)
+                ->select(
+                    DB::raw('DATE_FORMAT(cycle_movements.created_at, "%Y-%m") as month'),
+                    DB::raw('SUM(CASE WHEN movement_type = "return" THEN quantity ELSE -quantity END) as net_quantity')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
+
+            // Generate all months in the last 12 months
+            $months = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $months[] = now()->subMonths($i)->format('Y-m');
+            }
+
+            // Convert to maps for easier lookup
+            $purchasesMap = $purchases->pluck('total_quantity', 'month')->toArray();
+            $salesMap = $sales->pluck('total_quantity', 'month')->toArray();
+            $cycleMap = $cycleMovements->pluck('net_quantity', 'month')->toArray();
+
+            // Calculate stock level at the END of each month (forward calculation)
+            // Start with stock 12 months ago (estimate: current stock minus all movements)
+            $currentStock = floatval($product->current_stock_quantity);
+            
+            // Calculate total movements in the period
+            $totalPurchases = array_sum(array_map('floatval', $purchasesMap));
+            $totalSales = array_sum(array_map('floatval', $salesMap));
+            $totalCycleNet = array_sum(array_map('floatval', $cycleMap));
+            
+            // Estimated starting stock 12 months ago
+            $startingStock = max(0, $currentStock - $totalPurchases + $totalSales + $totalCycleNet);
+            
+            // Build response in chronological order with stock at END of each month
+            $monthlyData = [];
+            $runningStock = $startingStock;
+            
+            foreach ($months as $month) {
+                $monthPurchases = floatval($purchasesMap[$month] ?? 0);
+                $monthSales = floatval($salesMap[$month] ?? 0);
+                $monthCycleNet = floatval($cycleMap[$month] ?? 0);
+                
+                // Stock at END of month = stock at start + purchases - sales - cycle movements
+                // Cycle net is negative for load/reload, positive for return
+                $runningStock = $runningStock + $monthPurchases - $monthSales - $monthCycleNet;
+                $runningStock = max(0, $runningStock); // Ensure non-negative
+                
+                $monthlyData[] = [
+                    'month' => $month,
+                    'stock_level' => round($runningStock, 2), // Stock at END of month
+                    'purchases' => round($monthPurchases, 2),
+                    'sales' => round($monthSales, 2),
+                    'cycle_net' => round($monthCycleNet, 2),
+                ];
+            }
+
+            return response()->json([
+                'product_id' => $product->id,
+                'current_stock' => $currentStock,
+                'monthly_data' => $monthlyData,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to calculate stock history',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function purchasePriceHistory(Product $product)
+    {
+        try {
+            $twelveMonthsAgo = now()->subMonths(12)->startOfMonth();
+            
+            // Get average purchase price per month for this product
+            $purchasePrices = DB::table('purchase_details')
+                ->join('purchase_invoices', 'purchase_details.invoice_id', '=', 'purchase_invoices.id')
+                ->where('purchase_details.product_id', $product->id)
+                ->where('purchase_invoices.invoice_date', '>=', $twelveMonthsAgo)
+                ->select(
+                    DB::raw('DATE_FORMAT(purchase_invoices.invoice_date, "%Y-%m") as month'),
+                    DB::raw('AVG(purchase_details.purchase_price) as avg_price'),
+                    DB::raw('MIN(purchase_details.purchase_price) as min_price'),
+                    DB::raw('MAX(purchase_details.purchase_price) as max_price')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
+
+            // Generate all months in the last 12 months
+            $months = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $months[] = now()->subMonths($i)->format('Y-m');
+            }
+
+            // Convert to map for easier lookup
+            $priceMap = [];
+            foreach ($purchasePrices as $price) {
+                $priceMap[$price->month] = [
+                    'avg' => floatval($price->avg_price),
+                    'min' => floatval($price->min_price),
+                    'max' => floatval($price->max_price),
+                ];
+            }
+
+            // Get latest purchase price as current
+            $latestPurchase = DB::table('purchase_details')
+                ->join('purchase_invoices', 'purchase_details.invoice_id', '=', 'purchase_invoices.id')
+                ->where('purchase_details.product_id', $product->id)
+                ->where('purchase_invoices.invoice_date', '>=', $twelveMonthsAgo)
+                ->orderBy('purchase_invoices.invoice_date', 'desc')
+                ->orderBy('purchase_details.created_at', 'desc')
+                ->value('purchase_details.purchase_price');
+
+            $currentPrice = $latestPurchase ? floatval($latestPurchase) : null;
+
+            // Build monthly data
+            $monthlyData = [];
+            foreach ($months as $month) {
+                $monthData = $priceMap[$month] ?? null;
+                $monthlyData[] = [
+                    'month' => $month,
+                    'avg_price' => $monthData ? round($monthData['avg'], 2) : null,
+                    'min_price' => $monthData ? round($monthData['min'], 2) : null,
+                    'max_price' => $monthData ? round($monthData['max'], 2) : null,
+                ];
+            }
+
+            return response()->json([
+                'product_id' => $product->id,
+                'current_price' => $currentPrice ? round($currentPrice, 2) : null,
+                'monthly_data' => $monthlyData,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to calculate purchase price history',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }
