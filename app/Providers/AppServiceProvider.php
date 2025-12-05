@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Supplier::observe(\App\Observers\UserTrackingObserver::class);
         \App\Models\PurchaseInvoice::observe(\App\Observers\UserTrackingObserver::class);
         \App\Models\PurchaseDetail::observe(\App\Observers\UserTrackingObserver::class);
-        \App\Models\Setting::observe(\App\Observers\UserTrackingObserver::class);
+        // Setting model doesn't have user tracking columns, so no observer needed
         \App\Models\User::observe(\App\Observers\UserTrackingObserver::class);
     }
 }

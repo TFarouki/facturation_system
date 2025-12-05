@@ -52,22 +52,47 @@
                 <div class="text-h6 q-mb-sm">Company Logo</div>
               </div>
 
-              <div class="col-12 col-md-6">
-                <q-file
-                  v-model="logoFile"
-                  label="Upload Logo"
-                  outlined
-                  dense
-                  accept="image/*"
-                  @update:model-value="uploadLogo"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="attach_file" />
-                  </template>
-                </q-file>
-              </div>
-              <div class="col-12 col-md-6 flex flex-center" v-if="form.company_logo">
-                <img :src="getLogoUrl(form.company_logo)" style="max-height: 100px; max-width: 100%" />
+              <div class="col-12">
+                <div class="row q-col-gutter-md items-center">
+                  <div class="col-12 col-md-6">
+                    <q-file
+                      v-model="logoFile"
+                      label="Upload Logo"
+                      outlined
+                      dense
+                      accept="image/*"
+                      @update:model-value="uploadLogo"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="attach_file" />
+                      </template>
+                    </q-file>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div v-if="form.company_logo" class="row items-center q-gutter-sm">
+                      <div class="q-pa-sm" style="border: 1px solid #e0e0e0; border-radius: 4px; background: #fafafa;">
+                        <img 
+                          :src="getLogoUrl(form.company_logo)" 
+                          style="max-height: 80px; max-width: 150px; display: block;" 
+                          alt="Company Logo"
+                          @error="handleImageError"
+                        />
+                      </div>
+                      <q-btn
+                        flat
+                        dense
+                        icon="visibility"
+                        color="primary"
+                        @click="viewLogo"
+                      >
+                        <q-tooltip>View Logo</q-tooltip>
+                      </q-btn>
+                    </div>
+                    <div v-else class="text-caption text-grey-6 q-pa-sm">
+                      No logo uploaded
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -122,6 +147,25 @@
         </q-tab-panel>
       </q-tab-panels>
     </q-card>
+
+    <!-- Logo View Dialog -->
+    <q-dialog v-model="showLogoDialog">
+      <q-card style="max-width: 600px; width: 100%">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">Company Logo</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+        <q-card-section class="flex flex-center">
+          <img 
+            v-if="form.company_logo" 
+            :src="getLogoUrl(form.company_logo)" 
+            style="max-width: 100%; max-height: 500px; object-fit: contain;" 
+            alt="Company Logo"
+          />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -134,6 +178,7 @@ const $q = useQuasar();
 const tab = ref('company');
 const saving = ref(false);
 const logoFile = ref(null);
+const showLogoDialog = ref(false);
 
 const form = ref({
   company_name: '',
@@ -159,10 +204,33 @@ const loadSettings = async () => {
 const saveSettings = async () => {
   saving.value = true;
   try {
-    await api.put('/settings', form.value);
+    // Prepare data to send - exclude null/empty values that shouldn't be updated
+    const dataToSend = { ...form.value };
+    
+    // Remove company_logo if it's null (it should only be updated via uploadLogo)
+    if (dataToSend.company_logo === null || dataToSend.company_logo === '') {
+      delete dataToSend.company_logo;
+    }
+    
+    // Ensure percentages are numbers, not strings
+    if (dataToSend.semi_wholesale_percentage !== undefined) {
+      dataToSend.semi_wholesale_percentage = parseFloat(dataToSend.semi_wholesale_percentage) || 0;
+    }
+    if (dataToSend.retail_percentage !== undefined) {
+      dataToSend.retail_percentage = parseFloat(dataToSend.retail_percentage) || 0;
+    }
+    
+    await api.put('/settings', dataToSend);
     $q.notify({ type: 'positive', message: 'Settings saved successfully' });
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to save settings' });
+    const errorMessage = error.response?.data?.message || 'Failed to save settings';
+    const errorDetails = error.response?.data?.errors;
+    let fullMessage = errorMessage;
+    if (errorDetails) {
+      const details = Object.values(errorDetails).flat().join(', ');
+      fullMessage = `${errorMessage}: ${details}`;
+    }
+    $q.notify({ type: 'negative', message: fullMessage });
   } finally {
     saving.value = false;
   }
@@ -188,6 +256,15 @@ const uploadLogo = async (file) => {
 const getLogoUrl = (path) => {
   if (!path) return '';
   return `http://localhost:8000/storage/${path}`;
+};
+
+const viewLogo = () => {
+  if (!form.value.company_logo) return;
+  showLogoDialog.value = true;
+};
+
+const handleImageError = (event) => {
+  console.error('Failed to load logo image:', event);
 };
 
 const calculateExample = (base, percentage) => {

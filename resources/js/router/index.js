@@ -22,9 +22,19 @@ const routes = [
                 component: () => import('../views/Products.vue'),
             },
             {
+                path: 'inventory',
+                name: 'Inventory',
+                component: () => import('../views/Inventory.vue'),
+            },
+            {
                 path: 'categories',
                 name: 'Categories',
                 component: () => import('../views/Categories.vue'),
+            },
+            {
+                path: 'product-families',
+                name: 'ProductFamilies',
+                component: () => import('../views/ProductFamilies.vue'),
             },
             {
                 path: 'suppliers',
@@ -32,19 +42,39 @@ const routes = [
                 component: () => import('../views/Suppliers.vue'),
             },
             {
+                path: 'distributors',
+                name: 'Distributors',
+                component: () => import('../views/Distributors.vue'),
+            },
+            {
                 path: 'purchases',
                 name: 'Purchases',
                 component: () => import('../views/Purchases.vue'),
             },
             {
-                path: 'cycles',
-                name: 'Cycles',
-                component: () => import('../views/Cycles.vue'),
+                path: 'delivery-notes',
+                name: 'DeliveryNotes',
+                component: () => import('../views/DeliveryNotes.vue'),
+            },
+            {
+                path: 'return-notes',
+                name: 'ReturnNotes',
+                component: () => import('../views/ReturnNotes.vue'),
+            },
+            {
+                path: 'distributor-stock',
+                name: 'DistributorStock',
+                component: () => import('../views/DistributorStock.vue'),
             },
             {
                 path: 'sales',
                 name: 'Sales',
                 component: () => import('../views/Sales.vue'),
+            },
+            {
+                path: 'clients',
+                name: 'Clients',
+                component: () => import('../views/Clients.vue'),
             },
             {
                 path: 'reports',

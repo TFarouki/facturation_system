@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductSellingPrice;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseDetail;
+use App\Services\CmupCalculatorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -66,8 +67,12 @@ class PurchaseController extends Controller
                 'notes' => $request->notes,
             ]);
 
-            // Create invoice details and update stock
+            // Create invoice details, update stock, and calculate CMUP incrementally
+            $cmupCalculator = new CmupCalculatorService();
+
             foreach ($request->items as $item) {
+                $product = Product::find($item['product_id']);
+                
                 PurchaseDetail::create([
                     'invoice_id' => $invoice->id,
                     'product_id' => $item['product_id'],
@@ -75,8 +80,15 @@ class PurchaseController extends Controller
                     'purchase_price' => $item['purchase_price'],
                 ]);
 
-                // Update product stock
-                $product = Product::find($item['product_id']);
+                // Update CMUP incrementally BEFORE updating stock
+                // Formula: ((Old Stock × Old CMUP) + (New Price × New Quantity)) / (Old Stock + New Quantity)
+                $cmupCalculator->updateCmupIncremental(
+                    $product, 
+                    floatval($item['quantity']), 
+                    floatval($item['purchase_price'])
+                );
+                
+                // Update product stock AFTER CMUP calculation
                 $product->increment('current_stock_quantity', $item['quantity']);
             }
 
@@ -161,11 +173,42 @@ class PurchaseController extends Controller
                 'notes' => $request->notes,
             ]);
 
+            // Get old details before deletion to restore stock and reverse CMUP
+            $oldDetails = $purchase->details()->get();
+            
+            $cmupCalculator = new CmupCalculatorService();
+            
+            // Track affected products
+            $affectedProductIds = [];
+            
+            // Restore stock for old details
+            foreach ($oldDetails as $oldDetail) {
+                $product = Product::find($oldDetail->product_id);
+                if ($product) {
+                    // Restore stock
+                    $product->decrement('current_stock_quantity', $oldDetail->quantity);
+                    
+                    if (!in_array($product->id, $affectedProductIds)) {
+                        $affectedProductIds[] = $product->id;
+                    }
+                }
+            }
+
             // Delete old details
             $purchase->details()->delete();
 
-            // Create new details and update stock
+            // Recalculate CMUP for all affected products (after removing old details)
+            foreach ($affectedProductIds as $productId) {
+                $product = Product::find($productId);
+                if ($product) {
+                    $cmupCalculator->updateCmup($product);
+                }
+            }
+
+            // Create new details and update stock with incremental CMUP
             foreach ($request->items as $item) {
+                $product = Product::find($item['product_id']);
+                
                 PurchaseDetail::create([
                     'invoice_id' => $purchase->id,
                     'product_id' => $item['product_id'],
@@ -173,8 +216,14 @@ class PurchaseController extends Controller
                     'purchase_price' => $item['purchase_price'],
                 ]);
 
-                // Update product stock
-                $product = Product::find($item['product_id']);
+                // Update CMUP incrementally BEFORE updating stock
+                $cmupCalculator->updateCmupIncremental(
+                    $product,
+                    floatval($item['quantity']),
+                    floatval($item['purchase_price'])
+                );
+                
+                // Update product stock AFTER CMUP calculation
                 $product->increment('current_stock_quantity', $item['quantity']);
             }
 
@@ -197,11 +246,40 @@ class PurchaseController extends Controller
         \Illuminate\Support\Facades\Log::info('Destroy called for invoice ID: ' . $purchase->id);
         DB::beginTransaction();
         try {
+            // Get details before deletion to restore stock and reverse CMUP
+            $details = $purchase->details()->get();
+            
+            $cmupCalculator = new CmupCalculatorService();
+            
+            // Track affected products
+            $affectedProductIds = [];
+            
+            // Restore stock for all products in the invoice
+            foreach ($details as $detail) {
+                $product = Product::find($detail->product_id);
+                if ($product) {
+                    // Restore stock
+                    $product->decrement('current_stock_quantity', $detail->quantity);
+                    
+                    if (!in_array($product->id, $affectedProductIds)) {
+                        $affectedProductIds[] = $product->id;
+                    }
+                }
+            }
+            
             // Soft delete all invoice details (soft deletion)
             $purchase->details()->delete();
             
             // Soft delete the invoice itself
             $purchase->delete();
+            
+            // Recalculate CMUP for all affected products (after deletion)
+            foreach ($affectedProductIds as $productId) {
+                $product = Product::find($productId);
+                if ($product) {
+                    $cmupCalculator->updateCmup($product);
+                }
+            }
             
             DB::commit();
             return response()->json(['message' => 'Invoice deleted successfully']);

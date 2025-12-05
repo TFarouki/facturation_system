@@ -59,7 +59,7 @@
 
         <q-item clickable :to="{ name: 'Products' }">
           <q-item-section avatar>
-            <q-icon name="inventory" />
+            <q-icon name="shopping_bag" />
           </q-item-section>
           <q-item-section>Products (السلع)</q-item-section>
         </q-item>
@@ -71,6 +71,13 @@
           <q-item-section>Categories (الأصناف)</q-item-section>
         </q-item>
 
+        <q-item clickable :to="{ name: 'ProductFamilies' }">
+          <q-item-section avatar>
+            <q-icon name="family_restroom" />
+          </q-item-section>
+          <q-item-section>Product Families (عائلات المنتجات)</q-item-section>
+        </q-item>
+
         <q-item clickable :to="{ name: 'Suppliers' }">
           <q-item-section avatar>
             <q-icon name="local_shipping" />
@@ -78,18 +85,46 @@
           <q-item-section>Suppliers (الموردين)</q-item-section>
         </q-item>
 
+        <q-item clickable :to="{ name: 'Clients' }">
+          <q-item-section avatar>
+            <q-icon name="people" />
+          </q-item-section>
+          <q-item-section>Clients (العملاء)</q-item-section>
+        </q-item>
+
+        <q-item clickable :to="{ name: 'Distributors' }">
+          <q-item-section avatar>
+            <q-icon name="airport_shuttle" />
+          </q-item-section>
+          <q-item-section>Distributors (الموزعين)</q-item-section>
+        </q-item>
+
         <q-item clickable :to="{ name: 'Purchases' }">
           <q-item-section avatar>
             <q-icon name="shopping_cart" />
           </q-item-section>
-          <q-item-section>Incoming Goods (السلع الواردة)</q-item-section>
+          <q-item-section>Purchase Invoices</q-item-section>
         </q-item>
 
-        <q-item clickable :to="{ name: 'Cycles' }">
+        <q-item clickable :to="{ name: 'Inventory' }">
           <q-item-section avatar>
-            <q-icon name="loop" />
+            <q-icon name="inventory_2" />
           </q-item-section>
-          <q-item-section>Cycles (الدورات)</q-item-section>
+          <q-item-section>Inventory (المخزون)</q-item-section>
+        </q-item>
+
+        <q-item clickable :to="{ name: 'DeliveryNotes' }">
+          <q-item-section avatar>
+            <q-icon name="unarchive" />
+          </q-item-section>
+          <q-item-section>Delivery Notes (إذن خروج)</q-item-section>
+        </q-item>
+
+        <q-item clickable :to="{ name: 'DistributorStock' }">
+          <q-item-section avatar>
+            <q-icon name="inventory" />
+          </q-item-section>
+          <q-item-section>Distributor Stock (مخزون الموزعين)</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Sales' }">
@@ -97,6 +132,13 @@
             <q-icon name="point_of_sale" />
           </q-item-section>
           <q-item-section>Sales (المبيعات)</q-item-section>
+        </q-item>
+
+        <q-item clickable :to="{ name: 'ReturnNotes' }">
+          <q-item-section avatar>
+            <q-icon name="archive" />
+          </q-item-section>
+          <q-item-section>Return Notes (إذن إرجاع)</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Reports' }">

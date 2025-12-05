@@ -455,76 +455,160 @@
       </q-card>
     </q-dialog>
 
-    <!-- Invoice Details Dialog -->
-    <q-dialog v-model="showDetailsDialog">
-      <q-card style="min-width: 700px; max-width: 90vw;">
-        <q-card-section class="bg-primary text-white">
-          <div class="text-h6">Invoice Details</div>
-        </q-card-section>
-
-        <q-card-section v-if="selectedInvoice">
-          <div class="row q-col-gutter-md q-mb-md">
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Invoice Number</div>
-              <div class="text-body1">{{ selectedInvoice.invoice_number }}</div>
-            </div>
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Date</div>
-              <div class="text-body1">{{ selectedInvoice.invoice_date }}</div>
-            </div>
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Supplier</div>
-              <div class="text-body1">{{ selectedInvoice.supplier?.name || 'N/A' }}</div>
-            </div>
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Total Amount</div>
-              <div class="text-body1 text-weight-bold">{{ selectedInvoice.total_amount ? selectedInvoice.total_amount.toFixed(2) + ' DH' : 'N/A' }}</div>
-            </div>
-            <div class="col-12" v-if="selectedInvoice.notes">
-              <div class="text-caption text-grey-7">Notes</div>
-              <div class="text-body1">{{ selectedInvoice.notes }}</div>
-            </div>
-          </div>
-
-          <q-separator class="q-my-md" />
-
-          <div class="text-subtitle2 q-mb-sm">Items ({{ selectedInvoice.details_count || 0 }})</div>
-          <q-table
-            v-if="selectedInvoice.details"
-            :rows="selectedInvoice.details"
-            :columns="detailsColumns"
-            row-key="id"
-            flat
-            bordered
-            dense
-            hide-pagination
-            :rows-per-page-options="[0]"
-          >
-            <template v-slot:body-cell-product="props">
-              <q-td :props="props">
-                {{ props.row.product?.name || 'N/A' }}
-              </q-td>
-            </template>
-            <template v-slot:body-cell-unit="props">
-              <q-td :props="props">
-                {{ props.row.product?.unit?.unit_name_ar || 'N/A' }}
-              </q-td>
-            </template>
-            <template v-slot:body-cell-subtotal="props">
-              <q-td :props="props">
-                {{ (props.row.quantity * props.row.purchase_price).toFixed(2) }} DH
-              </q-td>
-            </template>
-          </q-table>
-
-          <div v-if="selectedInvoice.invoice_image_path" class="q-mt-md">
-            <div class="text-caption text-grey-7 q-mb-sm">Invoice Image</div>
-            <q-btn color="primary" icon="image" label="View Image" @click="viewImage(selectedInvoice.invoice_image_path)" />
+    <!-- Invoice Print View Dialog -->
+    <q-dialog v-model="showDetailsDialog" maximized>
+      <q-card class="invoice-card" style="overflow-y: auto;">
+        <q-card-section class="invoice-header q-pa-none">
+          <div class="row items-center justify-between q-pa-md">
+            <q-btn flat dense icon="close" @click="showDetailsDialog = false" />
+            <div class="text-h6">Purchase Invoice</div>
+            <q-btn 
+              flat 
+              dense 
+              icon="picture_as_pdf" 
+              label="Save as PDF" 
+              color="primary"
+              @click="saveAsPDF"
+              :loading="pdfLoading"
+            />
           </div>
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-section v-if="selectedInvoice" class="invoice-content" id="invoice-content">
+          <!-- Invoice Header -->
+          <div class="invoice-header-section">
+            <div class="row items-start justify-between">
+              <!-- Left: Date and Invoice Number -->
+              <div class="col-3">
+                <div class="invoice-label q-mb-xs">DATE</div>
+                <div class="invoice-value">{{ formatDate(selectedInvoice.invoice_date) }}</div>
+                <div class="invoice-label q-mt-md q-mb-xs">INVOICE NO</div>
+                <div class="invoice-value">{{ selectedInvoice.invoice_number }}</div>
+              </div>
+
+              <!-- Center: Company Name -->
+              <div class="col-5 text-center">
+                <div class="text-h4 text-weight-bold q-mb-md">INVOICE</div>
+                <div class="company-name text-weight-bold">{{ companySettings.company_name || 'YOUR COMPANY' }}</div>
+              </div>
+
+              <!-- Right: Logo -->
+              <div class="col-3 text-right">
+                <div v-if="companySettings.company_logo" class="company-logo q-mb-md">
+                  <img :src="getLogoUrl(companySettings.company_logo)" alt="Company Logo" style="max-width: 100px; max-height: 100px;" />
+                </div>
+                <div v-else class="logo-placeholder q-mb-md">
+                  <q-icon name="business" size="80px" color="grey-4" />
+                  <div class="text-caption text-grey-6">Logo Name</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Company and Supplier Info -->
+          <div class="invoice-info-section">
+            <div class="row q-col-gutter-md">
+              <!-- Company Info -->
+              <div class="col-6">
+                <div class="invoice-label q-mb-xs">YOUR COMPANY</div>
+                <div class="invoice-info">
+                  <div v-if="companySettings.address">{{ companySettings.address }}</div>
+                  <div v-if="companySettings.phone">Phone: {{ companySettings.phone }}</div>
+                  <div v-if="companySettings.email">Email: {{ companySettings.email }}</div>
+                </div>
+              </div>
+
+              <!-- Supplier Info -->
+              <div class="col-6 text-right">
+                <div class="invoice-label q-mb-xs">INVOICE TO</div>
+                <div class="invoice-info">
+                  <div class="text-weight-bold">{{ selectedInvoice.supplier?.name || selectedInvoice.supplier_name || 'N/A' }}</div>
+                  <div v-if="selectedInvoice.supplier?.address">{{ selectedInvoice.supplier.address }}</div>
+                  <div v-if="selectedInvoice.supplier?.phone">Phone: {{ selectedInvoice.supplier.phone }}</div>
+                  <div v-if="selectedInvoice.supplier?.email">Email: {{ selectedInvoice.supplier.email }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction Details Bar -->
+          <div class="transaction-bar">
+            <div class="row">
+              <div class="col-3">
+                <div class="transaction-label">PAYMENT TERMS</div>
+                <div class="transaction-value">Due on Receipt</div>
+              </div>
+              <div class="col-3">
+                <div class="transaction-label">DUE DATE</div>
+                <div class="transaction-value">{{ formatDate(selectedInvoice.invoice_date) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <div class="invoice-items-section" v-if="selectedInvoice.details && selectedInvoice.details.length > 0">
+            <table class="invoice-table">
+              <thead>
+                <tr>
+                  <th style="width: 5%">#</th>
+                  <th style="width: 45%">DESCRIPTION</th>
+                  <th style="width: 10%">QUANTITY</th>
+                  <th style="width: 20%" class="text-right">UNIT PRICE</th>
+                  <th style="width: 20%" class="text-right">LINE TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in selectedInvoice.details" :key="index">
+                  <td class="text-center">{{ index + 1 }}</td>
+                  <td>
+                    <div class="text-weight-medium">{{ item.product?.name || 'Product' }}</div>
+                    <div class="text-caption text-grey-6" v-if="item.product?.product_description">
+                      {{ item.product.product_description }}
+                    </div>
+                  </td>
+                  <td>{{ (parseFloat(item.quantity) || 0).toFixed(2) }}</td>
+                  <td class="text-right">{{ (parseFloat(item.purchase_price) || 0).toFixed(2) }} DH</td>
+                  <td class="text-right">{{ ((parseFloat(item.quantity) || 0) * (parseFloat(item.purchase_price) || 0)).toFixed(2) }} DH</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="text-center q-pa-md text-grey-6">
+            No items in this invoice
+          </div>
+
+          <!-- Totals Section -->
+          <div class="invoice-totals-section">
+            <div class="row justify-end">
+              <div class="totals-box">
+                <div class="total-row">
+                  <span class="total-label">Subtotal</span>
+                  <span class="total-value">{{ (calculateSubtotal() || 0).toFixed(2) }} DH</span>
+                </div>
+                <div class="total-row">
+                  <span class="total-label">Total</span>
+                  <span class="total-value final">{{ getTotalAmount().toFixed(2) }} DH</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes Section -->
+          <div class="invoice-notes-section" v-if="selectedInvoice.notes">
+            <div class="invoice-label q-mb-xs">NOTES</div>
+            <div class="invoice-notes">{{ selectedInvoice.notes }}</div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="invoice-actions">
           <q-btn label="Close" flat @click="showDetailsDialog = false" />
+          <q-btn 
+            label="Save as PDF" 
+            icon="picture_as_pdf" 
+            color="primary"
+            @click="saveAsPDF"
+            :loading="pdfLoading"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -573,11 +657,14 @@
 </template>
 
 <script setup>
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
 import api from '../api';
 import CategorySelect from '../components/CategorySelect.vue';
 import TaxSelect from '../components/TaxSelect.vue';
+import { formatDateForInput } from '../utils/invoiceUtils';
 
 
 const $q = useQuasar();
@@ -588,6 +675,7 @@ const units = ref([]);
 const categories = ref([]);
 const loading = ref(false);
 const saving = ref(false);
+const pdfLoading = ref(false);
 const showDialog = ref(false);
 const showProductDialog = ref(false);
 const showSupplierDialog = ref(false);
@@ -603,6 +691,14 @@ const attachedFile = ref(null);
 const settings = ref({
   semi_wholesale_percentage: 0,
   retail_percentage: 0,
+});
+
+const companySettings = ref({
+  company_name: '',
+  company_logo: '',
+  phone: '',
+  email: '',
+  address: '',
 });
 
 const form = ref({
@@ -1016,11 +1112,496 @@ const viewDetails = async (invoice) => {
     // Fetch full invoice details with relationships
     const response = await api.get(`/purchases/${invoice.id}`);
     selectedInvoice.value = response.data;
+    
+    // Ensure company settings are loaded
+    if (!companySettings.value.company_name) {
+      await loadSettings();
+    }
+    
     showDetailsDialog.value = true;
   } catch (error) {
     $q.notify({ type: 'negative', message: 'Failed to load invoice details' });
   } finally {
     loading.value = false;
+  }
+};
+
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
+const calculateSubtotal = () => {
+  if (!selectedInvoice.value || !selectedInvoice.value.details) return 0;
+  const subtotal = selectedInvoice.value.details.reduce((sum, item) => {
+    const quantity = parseFloat(item.quantity) || 0;
+    const price = parseFloat(item.purchase_price) || 0;
+    return sum + (quantity * price);
+  }, 0);
+  return isNaN(subtotal) ? 0 : subtotal;
+};
+
+const getTotalAmount = () => {
+  if (!selectedInvoice.value) return 0;
+  
+  // Try to get total_in_invoice first, then total_amount, then calculate
+  const totalInInvoice = selectedInvoice.value.total_in_invoice;
+  const totalAmount = selectedInvoice.value.total_amount;
+  
+  if (totalInInvoice !== null && totalInInvoice !== undefined) {
+    return parseFloat(totalInInvoice) || 0;
+  }
+  
+  if (totalAmount !== null && totalAmount !== undefined) {
+    return parseFloat(totalAmount) || 0;
+  }
+  
+  return calculateSubtotal();
+};
+
+const getLogoUrl = (logoPath) => {
+  if (!logoPath) return '';
+  return `http://localhost:8000/storage/${logoPath}`;
+};
+
+const saveAsPDF = async () => {
+  if (!selectedInvoice.value) return;
+  
+  pdfLoading.value = true;
+  try {
+    const invoiceContent = document.getElementById('invoice-content');
+    if (!invoiceContent) {
+      $q.notify({ type: 'negative', message: 'Invoice content not found' });
+      return;
+    }
+
+    // Show loading notification
+    $q.notify({
+      type: 'info',
+      message: 'Generating PDF...',
+      timeout: 2000
+    });
+
+    // A4 dimensions in mm
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const marginTop = 20;
+    const marginBottom = 20;
+    const marginLeft = 15;
+    const marginRight = 15;
+    const footerHeight = 10;
+    
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    const contentHeight = pageHeight - marginTop - marginBottom - footerHeight;
+    
+    // Create PDF
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Get sections
+    const headerSection = invoiceContent.querySelector('.invoice-header-section');
+    const infoSection = invoiceContent.querySelector('.invoice-info-section');
+    const transactionBar = invoiceContent.querySelector('.transaction-bar');
+    const itemsTable = invoiceContent.querySelector('.invoice-table');
+    const totalsSection = invoiceContent.querySelector('.invoice-totals-section');
+    const notesSection = invoiceContent.querySelector('.invoice-notes-section');
+    
+    let currentY = marginTop;
+    let currentPage = 1;
+    
+    // Function to add page number
+    const addPageNumber = (page, total) => {
+      // Clear any existing text in the area first (draw white rectangle)
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(pageWidth - marginRight - 35, pageHeight - 16, 35, 12, 'F');
+      
+      // Add page number with proper spacing
+      pdf.setFontSize(11);
+      pdf.setTextColor(40, 40, 40);
+      pdf.setFont('helvetica', 'bold');
+      const pageText = `${page} / ${total}`; // Add space around slash
+      const textWidth = pdf.getTextWidth(pageText);
+      pdf.text(pageText, pageWidth - marginRight - textWidth, pageHeight - 10);
+    };
+    
+    // Function to check if we need a new page
+    const checkNewPage = (requiredHeight) => {
+      if (currentY + requiredHeight > pageHeight - marginBottom - footerHeight) {
+        // Don't add page number here - will be added at the end
+        pdf.addPage();
+        currentPage++;
+        currentY = marginTop;
+        return true;
+      }
+      return false;
+    };
+    
+    // Capture and add header section
+    if (headerSection) {
+      const headerCanvas = await html2canvas(headerSection, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const headerImg = headerCanvas.toDataURL('image/png');
+      const headerHeight = (headerCanvas.height * contentWidth) / headerCanvas.width;
+      
+      checkNewPage(headerHeight);
+      pdf.addImage(headerImg, 'PNG', marginLeft, currentY, contentWidth, headerHeight);
+      currentY += headerHeight + 5;
+    }
+    
+    // Capture and add info section
+    if (infoSection) {
+      const infoCanvas = await html2canvas(infoSection, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const infoImg = infoCanvas.toDataURL('image/png');
+      const infoHeight = (infoCanvas.height * contentWidth) / infoCanvas.width;
+      
+      checkNewPage(infoHeight);
+      pdf.addImage(infoImg, 'PNG', marginLeft, currentY, contentWidth, infoHeight);
+      currentY += infoHeight + 5;
+    }
+    
+    // Capture and add transaction bar
+    if (transactionBar) {
+      const barCanvas = await html2canvas(transactionBar, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const barImg = barCanvas.toDataURL('image/png');
+      const barHeight = (barCanvas.height * contentWidth) / barCanvas.width;
+      
+      checkNewPage(barHeight);
+      pdf.addImage(barImg, 'PNG', marginLeft, currentY, contentWidth, barHeight);
+      currentY += barHeight + 5;
+    }
+    
+    // Calculate totals section height
+    let totalsHeight = 0;
+    if (totalsSection) {
+      const totalsCanvas = await html2canvas(totalsSection, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      totalsHeight = (totalsCanvas.height * contentWidth) / totalsCanvas.width;
+    }
+    
+    // Process table with html2canvas (original method)
+    if (itemsTable) {
+      const tableRows = Array.from(itemsTable.querySelectorAll('tbody tr'));
+      const tableHeader = itemsTable.querySelector('thead');
+      
+      if (tableRows.length === 0) {
+        // No rows to process
+        return;
+      }
+      
+      // Store original display styles
+      const originalRowStyles = tableRows.map(row => row.style.display);
+      if (tableHeader) {
+        tableHeader.style.display = '';
+      }
+      
+      // Calculate max Y position for table (reserve space for totals)
+      const maxYForTable = pageHeight - marginBottom - footerHeight - totalsHeight - 10;
+      const minRowsOnLastPage = 2;
+      
+      let rowIndex = 0;
+      const totalRows = tableRows.length;
+      
+      // Helper function to capture table portion
+      const captureTablePortion = async (startRow, endRow, includeHeader = true) => {
+        // Hide all rows first
+        tableRows.forEach(row => row.style.display = 'none');
+        
+        // Show header if needed
+        if (includeHeader && tableHeader) {
+          tableHeader.style.display = '';
+        } else if (tableHeader) {
+          tableHeader.style.display = 'none';
+        }
+        
+        // Show rows in range
+        for (let i = startRow; i < endRow && i < totalRows; i++) {
+          tableRows[i].style.display = '';
+        }
+        
+        // Force reflow to ensure rendering (reduced delay for speed)
+        await new Promise(resolve => {
+          itemsTable.offsetHeight;
+          void itemsTable.offsetWidth;
+          setTimeout(resolve, 50); // Reduced from 150ms to 50ms
+        });
+        
+        // Get the items section container
+        const itemsSection = itemsTable.closest('.invoice-items-section');
+        const containerToCapture = itemsSection || itemsTable;
+        
+        // Capture the visible portion (reduced scale for speed)
+        try {
+          const canvas = await html2canvas(containerToCapture, {
+            scale: 1.5, // Reduced from 2 to 1.5 for faster rendering
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            allowTaint: false,
+          });
+          return canvas;
+        } catch (error) {
+          console.error('Error capturing table portion:', error);
+          // Fallback: try capturing just the table
+          const canvas = await html2canvas(itemsTable, {
+            scale: 1.5, // Reduced from 2 to 1.5
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            allowTaint: false,
+          });
+          return canvas;
+        }
+      };
+      
+      // Capture header once
+      let headerImg = null;
+      let headerHeight = 0;
+      if (tableHeader) {
+        tableRows.forEach(row => row.style.display = 'none');
+        const headerCanvas = await html2canvas(tableHeader, {
+          scale: 1.5, // Reduced from 2 to 1.5 for faster rendering
+          useCORS: true,
+          backgroundColor: '#ffffff',
+        });
+        headerImg = headerCanvas.toDataURL('image/png');
+        headerHeight = (headerCanvas.height * contentWidth) / headerCanvas.width;
+      }
+      
+      // Calculate actual row height by capturing first page rows (15 rows)
+      let actualRowHeight = 0;
+      const referenceRows = Math.min(15, totalRows); // Use first 15 rows as reference
+      
+      if (referenceRows > 0) {
+        // Capture first page portion to calculate actual row height
+        const firstPageCanvas = await captureTablePortion(0, referenceRows, true);
+        const firstPageHeight = (firstPageCanvas.height * contentWidth) / firstPageCanvas.width;
+        // Calculate average row height: (total height - header) / number of rows
+        const rowsOnlyHeight = firstPageHeight - headerHeight;
+        actualRowHeight = rowsOnlyHeight / referenceRows;
+        
+        // If calculated height is too small or too large, use fallback
+        if (actualRowHeight < 5 || actualRowHeight > 15) {
+          actualRowHeight = headerHeight > 0 ? headerHeight * 0.7 : 8;
+        }
+      } else {
+        // Fallback if no rows
+        actualRowHeight = headerHeight > 0 ? headerHeight * 0.7 : 8;
+      }
+      
+      // Now process rows page by page using actual calculated height
+      while (rowIndex < totalRows) {
+        const remainingRows = totalRows - rowIndex;
+        const needsNewPage = rowIndex > 0 && (currentY + headerHeight > maxYForTable);
+        
+        if (needsNewPage) {
+          // Don't add page number here - will be added at the end
+          pdf.addPage();
+          currentPage++;
+          currentY = marginTop;
+          
+          // Add table header on new page
+          if (headerImg && headerHeight > 0) {
+            pdf.addImage(headerImg, 'PNG', marginLeft, currentY, contentWidth, headerHeight);
+            currentY += headerHeight;
+          }
+        }
+        
+        // Determine if totals should be on this page (before calculating rows)
+        let spaceForTotals = 0;
+        if (rowIndex === 0 && totalRows <= 10) {
+          // First page with ≤10 rows: totals go on first page
+          // Reserve minimal space to ensure all rows fit
+          spaceForTotals = totalsHeight + 5;
+        } else if (rowIndex === 0 && totalRows >= 11 && totalRows <= 16) {
+          // First page with 11-16 rows: totals go on second page, no space reserved here
+          spaceForTotals = 0;
+        } else if (remainingRows <= 3) {
+          // Last page: reserve space for totals
+          spaceForTotals = totalsHeight + 10;
+        }
+        
+        const maxYForRows = pageHeight - marginBottom - footerHeight - spaceForTotals;
+        const availableSpace = maxYForRows - currentY;
+        
+        // Estimate how many rows fit (using actual calculated row height)
+        let estimatedRowsToFit = Math.floor(availableSpace / actualRowHeight);
+        estimatedRowsToFit = Math.max(1, Math.min(estimatedRowsToFit, remainingRows));
+        
+        // Check if this will complete the table
+        const willCompleteTable = (rowIndex + estimatedRowsToFit) >= totalRows;
+        
+        // Smart logic for first page based on total rows:
+        // - ≤ 10 rows: all rows + totals on first page
+        // - 11-16 rows: (totalRows - 1) rows on first page, rest + totals on second page
+        // - > 16 rows: 15 rows on first page, then normal pagination
+        if (rowIndex === 0) {
+          // First page logic
+          if (totalRows <= 10) {
+            // All rows + totals on first page
+            estimatedRowsToFit = totalRows;
+          } else if (totalRows >= 11 && totalRows <= 16) {
+            // (totalRows - 1) rows on first page, rest + totals on second page
+            estimatedRowsToFit = totalRows - 1;
+          } else {
+            // More than 16 rows: 15 rows on first page
+            estimatedRowsToFit = 15;
+          }
+        } else {
+          // Subsequent pages: target 23 rows (but consider last page needs)
+          if (willCompleteTable && remainingRows > minRowsOnLastPage) {
+            // If next page will be last, leave 2 rows for it
+            const maxRowsForCurrentPage = remainingRows - minRowsOnLastPage;
+            estimatedRowsToFit = Math.min(estimatedRowsToFit, maxRowsForCurrentPage, 23);
+            estimatedRowsToFit = Math.max(1, estimatedRowsToFit);
+          } else {
+            // Normal page: use up to 23 rows
+            estimatedRowsToFit = Math.min(estimatedRowsToFit, 23, remainingRows);
+          }
+        }
+        
+        // Now capture only this portion (one capture per page)
+        let rowsGroupCanvas = await captureTablePortion(
+          rowIndex, 
+          rowIndex + estimatedRowsToFit, 
+          rowIndex === 0
+        );
+        
+        let rowsHeight = (rowsGroupCanvas.height * contentWidth) / rowsGroupCanvas.width;
+        const isLastPortion = (rowIndex + estimatedRowsToFit) >= totalRows;
+        
+        // Adjust if actual height doesn't fit (only one retry)
+        // BUT: If first page with ≤10 rows, we MUST fit all rows (don't reduce)
+        const isFirstPageWithAllRows = (rowIndex === 0 && totalRows <= 10);
+        if (rowsHeight > availableSpace && estimatedRowsToFit > 1 && !isFirstPageWithAllRows) {
+          // Try with one less row
+          estimatedRowsToFit--;
+          rowsGroupCanvas = await captureTablePortion(
+            rowIndex, 
+            rowIndex + estimatedRowsToFit, 
+            rowIndex === 0
+          );
+          rowsHeight = (rowsGroupCanvas.height * contentWidth) / rowsGroupCanvas.width;
+        }
+        
+        let finalHeight = rowsHeight;
+        
+        // Add rows first at normal position
+        pdf.addImage(rowsGroupCanvas.toDataURL('image/png'), 'PNG', marginLeft, currentY, contentWidth, finalHeight);
+        currentY += finalHeight;
+        
+        // Add spacing after rows on last page (before totals)
+        if (isLastPortion) {
+          const targetTotalsY = pageHeight - marginBottom - footerHeight - totalsHeight;
+          const availableSpaceForTotals = targetTotalsY - currentY;
+          if (availableSpaceForTotals > 10) {
+            const spacing = availableSpaceForTotals - 5; // Leave 5mm gap
+            currentY += spacing; // Add spacing after rows
+          }
+        }
+        
+        rowIndex += estimatedRowsToFit;
+      }
+      
+      // Restore original display styles
+      tableRows.forEach((row, index) => {
+        row.style.display = originalRowStyles[index] || '';
+      });
+      if (tableHeader) {
+        tableHeader.style.display = '';
+      }
+    }
+    
+    // Add totals section at bottom of last page
+    if (totalsSection) {
+      // Calculate target position for totals (at bottom of page)
+      const targetTotalsY = pageHeight - marginBottom - footerHeight - totalsHeight;
+      
+      // Check if totals fit on current page
+      const totalsFitOnCurrentPage = currentY + totalsHeight <= pageHeight - marginBottom - footerHeight;
+      
+      if (!totalsFitOnCurrentPage) {
+        // Totals don't fit, need new page
+        // Don't add page number here - will be added at the end
+        pdf.addPage();
+        currentPage++;
+        currentY = marginTop;
+      }
+      
+      // Capture totals section
+      const totalsCanvas = await html2canvas(totalsSection, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const totalsImg = totalsCanvas.toDataURL('image/png');
+      
+      // Calculate gap - the table extension should have filled most of it
+      // Position totals at bottom (gap will appear as white space, which is fine)
+      pdf.addImage(totalsImg, 'PNG', marginLeft, targetTotalsY, contentWidth, totalsHeight);
+      currentY = targetTotalsY + totalsHeight;
+    }
+    
+    // Add notes section if exists
+    if (notesSection) {
+      const notesCanvas = await html2canvas(notesSection, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const notesImg = notesCanvas.toDataURL('image/png');
+      const notesHeight = (notesCanvas.height * contentWidth) / notesCanvas.width;
+      
+      checkNewPage(notesHeight);
+      pdf.addImage(notesImg, 'PNG', marginLeft, currentY, contentWidth, notesHeight);
+    }
+    
+    // Add page numbers to all pages
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      addPageNumber(i, totalPages);
+    }
+    
+    // Generate filename
+    const invoiceNumber = selectedInvoice.value.invoice_number || 'invoice';
+    const fileName = `invoice_${invoiceNumber}_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    // Save PDF
+    pdf.save(fileName);
+    
+    $q.notify({ 
+      type: 'positive', 
+      message: 'Invoice PDF downloaded successfully',
+      timeout: 3000
+    });
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    $q.notify({ 
+      type: 'negative', 
+      message: 'Failed to generate PDF. Please try again.',
+      timeout: 3000
+    });
+  } finally {
+    pdfLoading.value = false;
   }
 };
 
@@ -1036,7 +1617,7 @@ const editInvoice = async (invoice) => {
       id: invoiceData.id,
       supplier_id: invoiceData.supplier_id,
       invoice_number: invoiceData.invoice_number,
-      invoice_date: invoiceData.invoice_date,
+      invoice_date: formatDateForInput(invoiceData.invoice_date), // Convert ISO to yyyy-MM-dd
       invoice_image: null, // Don't pre-populate file input
       notes: invoiceData.notes || '',
       manual_total: invoiceData.total_in_invoice || invoiceData.total_amount,
@@ -1139,6 +1720,14 @@ const loadSettings = async () => {
   try {
     const response = await api.get('/settings');
     settings.value = response.data;
+    // Also update company settings
+    companySettings.value = {
+      company_name: response.data.company_name || '',
+      company_logo: response.data.company_logo || '',
+      phone: response.data.phone || '',
+      email: response.data.email || '',
+      address: response.data.address || '',
+    };
   } catch (error) {
     console.error('Failed to load settings');
   }
@@ -1283,5 +1872,256 @@ onMounted(() => {
   width: 20.83%;
   flex: 0 0 20.83%;
   max-width: 20.83%;
+}
+
+/* Invoice Styles */
+.invoice-card {
+  background: white;
+  max-width: 210mm; /* A4 width */
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 900px) {
+  .invoice-card {
+    max-width: 100%;
+  }
+  
+  .invoice-content {
+    max-width: 100%;
+    padding: 15mm 10mm;
+  }
+}
+
+.invoice-header {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.invoice-content {
+  background: linear-gradient(to bottom, #f0f9f4 0%, #ffffff 15%, #ffffff 85%, #e8f4fb 100%);
+  min-height: calc(100vh - 120px);
+  padding: 20mm 15mm; /* A4 padding */
+  max-width: 210mm; /* A4 width */
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.invoice-header-section {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.invoice-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.invoice-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.company-name {
+  font-size: 18px;
+  color: #1976d2;
+}
+
+.logo-placeholder {
+  text-align: center;
+}
+
+.invoice-info-section {
+  margin: 30px 0;
+  padding: 20px 0;
+}
+
+.invoice-info {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.8;
+}
+
+.transaction-bar {
+  background: linear-gradient(135deg, #c8e6c9 0%, #b2dfdb 100%);
+  padding: 15px 20px;
+  margin: 20px 0;
+  border-radius: 4px;
+}
+
+.transaction-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.transaction-value {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+}
+
+.invoice-items-section {
+  margin: 30px 0;
+}
+
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.invoice-table thead {
+  background: linear-gradient(135deg, #c8e6c9 0%, #b2dfdb 100%);
+}
+
+.invoice-table th {
+  padding: 12px 15px;
+  text-align: left;
+  vertical-align: middle;
+  font-weight: bold;
+  font-size: 11px;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #81c784;
+}
+
+.invoice-table th.text-right {
+  text-align: right;
+}
+
+.invoice-table td {
+  padding: 5px 15px;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: middle;
+  font-size: 13px;
+  color: #555;
+}
+
+.invoice-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.invoice-table tbody tr:nth-child(even) {
+  background-color: #f0f9f4;
+}
+
+.invoice-table tbody tr:hover {
+  background-color: #e8f5e9;
+}
+
+.invoice-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.invoice-totals-section {
+  margin: 30px 0;
+  padding-top: 20px;
+}
+
+.totals-box {
+  background: linear-gradient(135deg, #e3f2fd 0%, #b3e5fc 100%);
+  padding: 20px 30px;
+  border-radius: 8px;
+  min-width: 300px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+}
+
+.total-row:last-child {
+  border-bottom: none;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 2px solid rgba(255,255,255,0.8);
+}
+
+.total-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-transform: uppercase;
+}
+
+.total-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.total-value.final {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1976d2;
+}
+
+.invoice-notes-section {
+  margin-top: 30px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  border-left: 4px solid #1976d2;
+}
+
+.invoice-notes {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.invoice-actions {
+  border-top: 1px solid #e0e0e0;
+  padding: 15px;
+}
+
+@media print {
+  .invoice-header,
+  .invoice-actions {
+    display: none !important;
+  }
+  
+  .invoice-card {
+    max-width: 210mm !important;
+    width: 210mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  .invoice-content {
+    background: white !important;
+    padding: 20mm 15mm !important;
+    max-width: 210mm !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+  }
 }
 </style>

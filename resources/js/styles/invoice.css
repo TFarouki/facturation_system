@@ -1,0 +1,256 @@
+/**
+ * Invoice Template Styles
+ * Reusable styles for invoice templates
+ */
+
+/* Invoice Card Container */
+.invoice-card {
+  max-width: 210mm;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.invoice-header {
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Invoice Content */
+.invoice-content {
+  background: linear-gradient(to bottom, #f0f9f4 0%, #ffffff 15%, #ffffff 85%, #e8f4fb 100%);
+  min-height: calc(100vh - 120px);
+  padding: 20mm 15mm; /* A4 padding */
+  max-width: 210mm; /* A4 width */
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Header Section */
+.invoice-header-section {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.invoice-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.invoice-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.company-name {
+  font-size: 18px;
+  color: #1976d2;
+}
+
+.logo-placeholder {
+  text-align: center;
+}
+
+/* Info Section */
+.invoice-info-section {
+  margin: 30px 0;
+  padding: 20px 0;
+}
+
+.invoice-info {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.8;
+}
+
+/* Transaction Bar */
+.transaction-bar {
+  background: linear-gradient(135deg, #c8e6c9 0%, #b2dfdb 100%);
+  padding: 15px 20px;
+  margin: 20px 0;
+  border-radius: 4px;
+}
+
+.transaction-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.transaction-value {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+}
+
+/* Items Section */
+.invoice-items-section {
+  margin: 30px 0;
+}
+
+/* Invoice Table */
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.invoice-table thead {
+  background: linear-gradient(135deg, #c8e6c9 0%, #b2dfdb 100%);
+}
+
+.invoice-table th {
+  padding: 12px 15px;
+  text-align: left;
+  vertical-align: middle;
+  font-weight: bold;
+  font-size: 11px;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #81c784;
+}
+
+.invoice-table th.text-right {
+  text-align: right;
+}
+
+.invoice-table td {
+  padding: 5px 15px;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: middle;
+  font-size: 13px;
+  color: #555;
+}
+
+/* Zebra striping */
+.invoice-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.invoice-table tbody tr:nth-child(even) {
+  background-color: #f0f9f4;
+}
+
+.invoice-table tbody tr:hover {
+  background-color: #e8f5e9;
+}
+
+.invoice-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Totals Section */
+.invoice-totals-section {
+  margin: 30px 0;
+  padding-top: 20px;
+}
+
+.totals-box {
+  background: linear-gradient(135deg, #e3f2fd 0%, #b3e5fc 100%);
+  padding: 20px 30px;
+  border-radius: 8px;
+  min-width: 300px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.total-row:last-child {
+  border-bottom: none;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.total-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-transform: uppercase;
+}
+
+.total-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.total-value.final {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1976d2;
+}
+
+/* Notes Section */
+.invoice-notes-section {
+  margin-top: 30px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  border-left: 4px solid #1976d2;
+}
+
+.invoice-notes {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Actions */
+.invoice-actions {
+  border-top: 1px solid #e0e0e0;
+  padding: 15px;
+}
+
+/* Print Media Queries */
+@media print {
+  .invoice-header,
+  .invoice-actions {
+    display: none !important;
+  }
+  
+  .invoice-card {
+    max-width: 210mm !important;
+    width: 210mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  .invoice-content {
+    background: white !important;
+    padding: 20mm 15mm !important;
+    max-width: 210mm !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+  }
+}
+
