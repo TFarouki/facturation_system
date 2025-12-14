@@ -37,14 +37,10 @@ class DistributorController extends Controller
 
                 $unpaidSalesTotal = 0;
                 foreach ($sales as $sale) {
-                    $total = $sale->details->sum('subtotal'); // Assuming subtotal exists or calculate it: qty * price
-                    if ($sale->details->isEmpty()) continue;
-                    
-                    // If subtotal is not on details, calculate it:
-                    if ($total == 0) {
-                        foreach($sale->details as $detail) {
-                            $total += $detail->quantity * $detail->unit_price;
-                        }
+                    $total = 0;
+                    foreach($sale->details as $detail) {
+                        $price = $detail->selling_price ?? $detail->unit_price ?? 0;
+                        $total += $detail->quantity * $price;
                     }
                     
                     $paid = $sale->payments->sum('amount');
@@ -77,7 +73,8 @@ class DistributorController extends Controller
         foreach ($sales as $sale) {
              $total = 0;
              foreach($sale->details as $detail) {
-                  $total += $detail->quantity * $detail->unit_price;
+                  $price = $detail->selling_price ?? $detail->unit_price ?? 0;
+                  $total += $detail->quantity * $price;
              }
              $paid = $sale->payments->sum('amount');
              if (($total - $paid) > 0.01) {
@@ -117,7 +114,8 @@ class DistributorController extends Controller
             $unpaidSales = $allSales->map(function ($sale) {
                 $total = 0;
                 foreach($sale->details as $detail) {
-                    $total += $detail->quantity * $detail->unit_price;
+                    $price = $detail->selling_price ?? $detail->unit_price ?? 0;
+                    $total += $detail->quantity * $price;
                 }
                 $paid = $sale->payments->sum('amount');
                 $remaining = $total - $paid;
