@@ -275,6 +275,9 @@ export default {
     confirmDeleteTitle: 'تأكيد الحذف',
     confirmDeleteMessage: 'هل أنت متأكد من حذف الموزع "{name}"؟',
     deletedSuccessfully: 'تم حذف الموزع بنجاح',
+    stockValue: 'قيمة المخزون (منتجات في السيارة)',
+    unpaidSalesTotal: 'إجمالي المبيعات غير المدفوعة',
+    cannotDelete: 'لا يمكن حذف الموزع الذي لديه منتجات في المخزون أو مبيعات غير مدفوعة (تحمل مالي)',
   },
 
   // Distributor Stock Review

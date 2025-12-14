@@ -296,6 +296,9 @@ export default {
     confirmDeleteTitle: 'Confirm Delete',
     confirmDeleteMessage: 'Are you sure you want to delete distributor "{name}"?',
     deletedSuccessfully: 'Distributor deleted successfully',
+    stockValue: 'Stock Value (Products in Vehicle)',
+    unpaidSalesTotal: 'Total Unpaid Sales',
+    cannotDelete: 'Cannot delete distributor with products in stock or unpaid sales (financial liability)',
   },
 
   // Distributor Stock Review

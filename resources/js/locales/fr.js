@@ -317,6 +317,9 @@ export default {
     confirmDeleteTitle: 'Confirmer la suppression',
     confirmDeleteMessage: 'Êtes-vous sûr de vouloir supprimer le distributeur "{name}" ?',
     deletedSuccessfully: 'Distributeur supprimé avec succès',
+    stockValue: 'Valeur du Stock (Produits dans le Véhicule)',
+    unpaidSalesTotal: 'Total des Ventes Non Payées',
+    cannotDelete: 'Impossible de supprimer un distributeur ayant des produits en stock ou des ventes non payées (dette financière)',
   },
 
   // Distributor Stock Review

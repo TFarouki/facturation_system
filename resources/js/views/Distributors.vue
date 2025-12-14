@@ -125,14 +125,34 @@
         </q-card-section>
 
         <q-card-section class="q-pa-md">
-           <!-- Summary Card -->
-           <div class="row q-mb-lg justify-center">
-             <div class="col-12 col-md-4">
+           <!-- Summary Cards -->
+           <div class="row q-mb-lg justify-center q-gutter-md">
+             <div class="col-12 col-md-3">
+               <q-card flat bordered class="bg-blue-1 text-center">
+                 <q-card-section>
+                   <div class="text-subtitle1 text-grey-8">{{ $t('distributors.stockValue') }}</div>
+                   <div class="text-h4 text-primary text-weight-bold">
+                       {{ parseFloat(unpaidStats.stock_value || 0).toFixed(2) }} DH
+                   </div>
+                 </q-card-section>
+               </q-card>
+             </div>
+             <div class="col-12 col-md-3">
+               <q-card flat bordered class="bg-orange-1 text-center">
+                 <q-card-section>
+                   <div class="text-subtitle1 text-grey-8">{{ $t('distributors.unpaidSalesTotal') }}</div>
+                   <div class="text-h4 text-warning text-weight-bold">
+                       {{ parseFloat(unpaidStats.total_unpaid_sales || 0).toFixed(2) }} DH
+                   </div>
+                 </q-card-section>
+               </q-card>
+             </div>
+             <div class="col-12 col-md-3">
                <q-card flat bordered class="bg-red-1 text-center">
                  <q-card-section>
                    <div class="text-subtitle1 text-grey-8">{{ $t('distributors.totalLiabilities') }}</div>
                    <div class="text-h4 text-negative text-weight-bold">
-                       {{ parseFloat(unpaidStats.total_unpaid || 0).toFixed(2) }} DH
+                       {{ parseFloat(unpaidStats.total_liabilities || 0).toFixed(2) }} DH
                    </div>
                  </q-card-section>
                </q-card>
@@ -143,14 +163,11 @@
            <q-table
              :title="$t('distributors.liabilitiesTableTitle')"
              :rows="unpaidStats.sales"
+             :columns="unpaidColumns"
+             row-key="id"
              :loading="loadingUnpaid"
              :no-data-label="$t('common.noData')"
              :loading-label="$t('common.loading')"
-             flat
-             bordered
-           >
-             :columns="unpaidColumns"
-             row-key="id"
              flat
              bordered
              :pagination="{ rowsPerPage: 10 }"
@@ -224,6 +241,7 @@ const { t } = useI18n();
 const distributors = ref([]);
 const searchText = ref('');
 const loading = ref(false);
+const loadingUnpaid = ref(false);
 const saving = ref(false);
 const showDialog = ref(false);
 const editMode = ref(false);
@@ -250,7 +268,12 @@ const showSettlementDialog = ref(false);
 const showReceiptDetailsDialog = ref(false);
 const selectedDistributorForSettlement = ref(null);
 const selectedReceipt = ref(null);
-const unpaidStats = ref({ total_unpaid: 0, sales: [] });
+const unpaidStats = ref({ 
+  stock_value: 0, 
+  total_unpaid_sales: 0, 
+  total_liabilities: 0, 
+  sales: [] 
+});
 
 const unpaidColumns = computed(() => [
     { name: 'receipt_number', label: t('distributors.receiptNumber'), field: 'receipt_number', align: 'left' },
@@ -269,7 +292,7 @@ const openSettlementDialog = async (distributor) => {
 };
 
 const fetchLiabilities = async (distributorId) => {
-    loading.value = true;
+    loadingUnpaid.value = true;
     try {
         const response = await api.get(`/distributors/${distributorId}/unpaid-sales`);
         unpaidStats.value = response.data;
@@ -277,7 +300,7 @@ const fetchLiabilities = async (distributorId) => {
         console.error('Error fetching liabilities:', error);
         $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
     } finally {
-        loading.value = false;
+        loadingUnpaid.value = false;
     }
 };
 
@@ -380,7 +403,11 @@ const deleteDistributor = async (distributor) => {
       $q.notify({ type: 'positive', message: t('distributors.deletedSuccessfully') });
       loadDistributors();
     } catch (error) {
-      $q.notify({ type: 'negative', message: t('messages.error') });
+      if (error.response?.status === 409) {
+          $q.notify({ type: 'warning', message: error.response?.data?.message || t('distributors.cannotDelete') });
+      } else {
+          $q.notify({ type: 'negative', message: t('messages.error') });
+      }
     }
   });
 };
