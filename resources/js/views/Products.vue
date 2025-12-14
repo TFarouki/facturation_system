@@ -374,11 +374,9 @@ const form = ref({
   category_id: null,
   wholesale_price: 0,
   semi_wholesale_price: 0,
-  category_id: null,
-  wholesale_price: 0,
-  semi_wholesale_price: 0,
   retail_price: 0,
   initial_cost: 0,
+  tax_rate: 0,
 });
 
 const priceForm = ref({
@@ -588,6 +586,7 @@ const editProduct = (product) => {
     wholesale_price: product.current_price?.wholesale_price || 0,
     semi_wholesale_price: product.current_price?.semi_wholesale_price || 0,
     retail_price: product.current_price?.retail_price || 0,
+    tax_rate: product.current_price?.tax_rate || 0,
   };
   showDialog.value = true;
 };
@@ -613,6 +612,7 @@ const closeProductDialog = () => {
     semi_wholesale_price: 0,
     retail_price: 0,
     initial_cost: 0,
+    tax_rate: 0,
   };
 };
 
