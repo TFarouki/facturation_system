@@ -19,6 +19,7 @@ class Setting extends Model
         'contact_phone',
         'semi_wholesale_percentage',
         'retail_percentage',
+        'language',
     ];
 
     protected $casts = [

@@ -1,8 +1,8 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Suppliers (الموردين)</div>
-      <q-btn color="primary" icon="add" label="Add Supplier" @click="() => openDialog()" />
+      <div class="text-h4">{{ $t('nav.suppliers') }}</div>
+      <q-btn color="primary" icon="add" :label="$t('common.add')" @click="() => openDialog()" />
     </div>
 
     <!-- Search Input -->
@@ -11,7 +11,7 @@
         v-model="searchText"
         outlined
         dense
-        placeholder="Search suppliers..."
+        :placeholder="$t('common.search') + '...'"
         style="max-width: 400px"
       >
         <template v-slot:prepend>
@@ -26,7 +26,7 @@
 
       <!-- Export to Excel -->
       <q-btn flat round dense icon="download" color="positive" @click="exportToExcel">
-        <q-tooltip>Export to Excel</q-tooltip>
+        <q-tooltip>{{ $t('products.exportToExcel') }}</q-tooltip>
       </q-btn>
     </div>
 
@@ -38,15 +38,18 @@
       flat
       bordered
       class="rounded-table"
+      :rows-per-page-label="$t('common.rowsPerPage')"
+      :no-data-label="$t('common.noData')"
+      :loading-label="$t('common.loading')"
       :rows-per-page-options="[10, 25, 50]"
     >
       <template v-slot:body-cell-actions="props">
         <q-td :props="props">
           <q-btn flat dense icon="edit" color="positive" @click="() => openDialog(props.row)">
-            <q-tooltip>Edit</q-tooltip>
+            <q-tooltip>{{ $t('common.edit') }}</q-tooltip>
           </q-btn>
           <q-btn flat dense icon="delete" color="negative" @click="() => deleteSupplier(props.row)">
-            <q-tooltip>Delete</q-tooltip>
+            <q-tooltip>{{ $t('common.delete') }}</q-tooltip>
           </q-btn>
         </q-td>
       </template>
@@ -56,38 +59,38 @@
     <q-dialog v-model="showDialog" persistent>
       <q-card style="min-width: 500px">
         <q-card-section class="bg-primary text-white">
-          <div class="text-h6">{{ editMode ? 'Edit Supplier' : 'Add Supplier' }}</div>
+          <div class="text-h6">{{ editMode ? $t('common.edit') : $t('common.add') }}</div>
         </q-card-section>
 
         <q-card-section>
           <q-form @submit="saveSupplier">
             <div class="row q-col-gutter-md">
               <div class="col-12">
-                <q-input v-model="form.name" label="Supplier Name *" outlined dense :rules="[val => !!val || 'Required']" />
+                <q-input v-model="form.name" :label="$t('distributors.name') + ' *'" outlined dense :rules="[val => !!val || $t('messages.required')]" />
               </div>
               <div class="col-6">
-                <q-input v-model="form.contact_person" label="Contact Person" outlined dense />
+                <q-input v-model="form.contact_person" :label="$t('settings.contactPerson')" outlined dense />
               </div>
               <div class="col-6">
-                <q-input v-model="form.phone" label="Phone" outlined dense />
+                <q-input v-model="form.phone" :label="$t('settings.phone')" outlined dense />
               </div>
               <div class="col-6">
-                <q-input v-model="form.email" label="Email" type="email" outlined dense />
+                <q-input v-model="form.email" :label="$t('settings.email')" type="email" outlined dense />
               </div>
               <div class="col-6">
-                <q-input v-model="form.tax_id" label="Tax ID" outlined dense />
+                <q-input v-model="form.tax_id" :label="$t('products.tax')" outlined dense />
               </div>
               <div class="col-12">
-                <q-input v-model="form.address" label="Address" outlined dense type="textarea" rows="2" />
+                <q-input v-model="form.address" :label="$t('clients.address')" outlined dense type="textarea" rows="2" />
               </div>
               <div class="col-12">
-                <q-input v-model="form.notes" label="Notes" outlined dense type="textarea" rows="2" />
+                <q-input v-model="form.notes" :label="$t('common.notes')" outlined dense type="textarea" rows="2" />
               </div>
             </div>
 
             <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancel" flat @click="closeDialog" />
-              <q-btn type="submit" label="Save" color="primary" :loading="saving" />
+              <q-btn :label="$t('common.cancel')" flat @click="closeDialog" />
+              <q-btn type="submit" :label="$t('common.save')" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -99,9 +102,11 @@
 <script setup>
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import api from '../api';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const suppliers = ref([]);
 const searchText = ref('');
 const loading = ref(false);
@@ -120,14 +125,14 @@ const form = ref({
   notes: '',
 });
 
-const columns = [
-  { name: 'name', label: 'Supplier Name', field: 'name', align: 'left', sortable: true },
-  { name: 'contact_person', label: 'Contact Person', field: 'contact_person', align: 'left', sortable: true },
-  { name: 'phone', label: 'Phone', field: 'phone', align: 'left' },
-  { name: 'email', label: 'Email', field: 'email', align: 'left' },
-  { name: 'tax_id', label: 'Tax ID', field: 'tax_id', align: 'left' },
-  { name: 'actions', label: 'Actions', field: 'actions', align: 'center', sortable: false },
-];
+const columns = computed(() => [
+  { name: 'name', label: t('distributors.name'), field: 'name', align: 'left', sortable: true },
+  { name: 'contact_person', label: t('settings.contactPerson'), field: 'contact_person', align: 'left', sortable: true },
+  { name: 'phone', label: t('settings.phone'), field: 'phone', align: 'left' },
+  { name: 'email', label: t('settings.email'), field: 'email', align: 'left' },
+  { name: 'tax_id', label: t('products.tax'), field: 'tax_id', align: 'left' },
+  { name: 'actions', label: t('common.actions'), field: 'actions', align: 'center', sortable: false },
+]);
 
 // Computed property for filtered suppliers
 const filteredSuppliers = computed(() => {
@@ -150,7 +155,7 @@ const loadSuppliers = async () => {
     const response = await api.get('/suppliers');
     suppliers.value = response.data;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load suppliers' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -206,11 +211,11 @@ const saveSupplier = async () => {
     } else {
       await api.post('/suppliers', form.value);
     }
-    $q.notify({ type: 'positive', message: 'Supplier saved successfully' });
+    $q.notify({ type: 'positive', message: t('messages.savedSuccessfully') });
     closeDialog();
     loadSuppliers();
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to save supplier' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -218,16 +223,16 @@ const saveSupplier = async () => {
 
 const deleteSupplier = async (supplier) => {
   $q.dialog({
-    title: 'Confirm',
-    message: `Delete supplier "${supplier.name}"?`,
+    title: t('purchases.confirmDeleteTitle'),
+    message: t('purchases.confirmDeleteMessage', { name: supplier.name }),
     cancel: true,
   }).onOk(async () => {
     try {
       await api.delete(`/suppliers/${supplier.id}`);
-      $q.notify({ type: 'positive', message: 'Supplier deleted' });
+      $q.notify({ type: 'positive', message: t('messages.deletedSuccessfully') });
       loadSuppliers();
     } catch (error) {
-      $q.notify({ type: 'negative', message: 'Failed to delete supplier' });
+      $q.notify({ type: 'negative', message: t('messages.failedToDelete') });
     }
   });
 };
@@ -236,13 +241,13 @@ const exportToExcel = () => {
   try {
     // Prepare data for export
     const exportData = filteredSuppliers.value.map(supplier => ({
-      'Supplier Name': supplier.name,
-      'Contact Person': supplier.contact_person || '-',
-      'Phone': supplier.phone || '-',
-      'Email': supplier.email || '-',
-      'Tax ID': supplier.tax_id || '-',
-      'Address': supplier.address || '-',
-      'Notes': supplier.notes || '-',
+      [t('distributors.name')]: supplier.name,
+      [t('settings.contactPerson')]: supplier.contact_person || '-',
+      [t('settings.phone')]: supplier.phone || '-',
+      [t('settings.email')]: supplier.email || '-',
+      [t('products.tax')]: supplier.tax_id || '-',
+      [t('clients.address')]: supplier.address || '-',
+      [t('common.notes')]: supplier.notes || '-',
     }));
 
     // Convert to CSV
@@ -269,9 +274,9 @@ const exportToExcel = () => {
     link.click();
     document.body.removeChild(link);
 
-    $q.notify({ type: 'positive', message: 'Suppliers exported successfully' });
+    $q.notify({ type: 'positive', message: t('messages.exportedSuccessfully') });
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to export suppliers' });
+    $q.notify({ type: 'negative', message: t('messages.failedToExport') });
   }
 };
 

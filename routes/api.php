@@ -38,19 +38,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('units', UnitController::class);
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('distributors', DistributorController::class);
+    Route::apiResource('taxes', TaxController::class);
+    Route::post('/distributors/{id}/payments', [DistributorController::class, 'addPayment']);
+    Route::get('/distributors/{id}/settlements', [DistributorController::class, 'getSettlementHistory']);
+    Route::get('/distributors/{id}/unpaid-sales', [DistributorController::class, 'getUnpaidSales']);
+    Route::get('/distributors/{id}/stocks', [DistributorController::class, 'getStocks']);
+    Route::delete('/distributor-payments/{id}', [DistributorController::class, 'deletePayment']);
     Route::get('/distributors/{distributor}/committed-products', [DistributionOrderController::class, 'getCommittedProductsByDistributor']);
     Route::get('/distribution-orders/next-number', [DistributionOrderController::class, 'getNextOrderNumber']);
     Route::get('/distribution-orders/committed-products', [DistributionOrderController::class, 'getCommittedProducts']);
     Route::apiResource('distribution-orders', DistributionOrderController::class);
     Route::get('/distribution-orders/report/sales', [DistributionOrderController::class, 'salesReport']);
     Route::apiResource('purchases', PurchaseController::class);
-    Route::apiResource('taxes', TaxController::class);
+    Route::apiResource('sales', SalesController::class)->parameters(['sales' => 'receipt']);
+    Route::post('/sales/{id}/payments', [SalesController::class, 'addPayment']);
+    Route::get('/sales/{id}/payments', [SalesController::class, 'getPayments']);
+    Route::delete('/sales-payments/{payment}', [SalesController::class, 'deletePayment']);
     
     // Additional Routes
     Route::put('/products/{product}/prices', [ProductController::class, 'updatePrices']);
     Route::get('/products/{product}/stock-history', [ProductController::class, 'stockHistory']);
     Route::get('/products/{product}/purchase-price-history', [ProductController::class, 'purchasePriceHistory']);
     Route::post('/purchases/{purchase}/attach-file', [PurchaseController::class, 'attachFile']);
+    Route::post('/purchases/{id}/payments', [PurchaseController::class, 'addPayment']);
+    Route::get('/purchases/{id}/payments', [PurchaseController::class, 'getPayments']);
+    Route::delete('/purchase-payments/{payment}', [PurchaseController::class, 'deletePayment']);
     
     // Cycles
     Route::get('/cycles', [CycleController::class, 'index']);
@@ -64,12 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('clients', ClientController::class);
 
     // Sales
-    Route::get('/sales', [SalesController::class, 'index']);
+    // Sales routes are already defined via apiResource above
     Route::get('/sales/next-receipt-number', [SalesController::class, 'getNextReceiptNumber']);
-    Route::post('/sales', [SalesController::class, 'store']);
-    Route::get('/sales/{receipt}', [SalesController::class, 'show']);
-    Route::put('/sales/{receipt}', [SalesController::class, 'update']);
-    Route::delete('/sales/{receipt}', [SalesController::class, 'destroy']);
+
     
     // Reports
     Route::get('/reports/profit', [ReportController::class, 'profit']);

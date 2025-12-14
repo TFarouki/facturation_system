@@ -33,6 +33,11 @@ class PurchaseInvoice extends Model
         return $this->hasMany(PurchaseDetail::class, 'invoice_id');
     }
 
+    public function payments()
+    {
+        return $this->hasMany(PurchasePayment::class, 'purchase_invoice_id');
+    }
+
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);

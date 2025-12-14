@@ -53,13 +53,31 @@ class DistributionOrderController extends Controller
                 'notes' => $request->notes,
             ]);
 
-            // Create order details
+            // Create order details and update stock
             foreach ($request->items as $item) {
                 DistributionOrderDetail::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                 ]);
+
+                // Update Real-Time Distributor Stock
+                $vanStock = \App\Models\DistributorStock::firstOrCreate(
+                    ['distributor_id' => $request->distributor_id, 'product_id' => $item['product_id']],
+                    ['quantity' => 0]
+                );
+
+                if ($request->order_type === 'sortie') {
+                    // Load Van: Increase Van Stock, Decrease Main Stock
+                    $vanStock->increment('quantity', $item['quantity']);
+                    // Optional: Decrease Main Warehouse Stock (if tracked in products table)
+                    // \App\Models\Product::find($item['product_id'])?->decrement('stock_quantity', $item['quantity']);
+                } else {
+                    // Return: Decrease Van Stock, Increase Main Stock
+                    $vanStock->decrement('quantity', $item['quantity']);
+                     // Optional: Increase Main Warehouse Stock
+                    // \App\Models\Product::find($item['product_id'])?->increment('stock_quantity', $item['quantity']);
+                }
             }
 
             DB::commit();
@@ -102,16 +120,46 @@ class DistributionOrderController extends Controller
                 'notes' => $request->notes,
             ]);
 
+            // 1. Reverse stock impact of OLD details
+            foreach ($distributionOrder->details as $detail) {
+                $vanStock = \App\Models\DistributorStock::firstOrCreate(
+                    ['distributor_id' => $distributionOrder->distributor_id, 'product_id' => $detail->product_id],
+                    ['quantity' => 0]
+                );
+
+                if ($distributionOrder->order_type === 'sortie') {
+                    // Reverse Sortie: Decrease Van Stock
+                    $vanStock->decrement('quantity', $detail->quantity);
+                } else {
+                    // Reverse Entree: Increase Van Stock
+                    $vanStock->increment('quantity', $detail->quantity);
+                }
+            }
+
             // Delete old details
             $distributionOrder->details()->delete();
 
-            // Create new details
+            // Create new details and Update Stock
             foreach ($request->items as $item) {
                 DistributionOrderDetail::create([
                     'order_id' => $distributionOrder->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                 ]);
+
+                // Update Real-Time Distributor Stock (New Details)
+                $vanStock = \App\Models\DistributorStock::firstOrCreate(
+                    ['distributor_id' => $request->distributor_id, 'product_id' => $item['product_id']],
+                    ['quantity' => 0]
+                );
+
+                if ($request->order_type === 'sortie') {
+                    // Sortie: Increase Van
+                    $vanStock->increment('quantity', $item['quantity']);
+                } else {
+                    // Entree: Decrease Van
+                    $vanStock->decrement('quantity', $item['quantity']);
+                }
             }
 
             DB::commit();
@@ -129,6 +177,22 @@ class DistributionOrderController extends Controller
     {
         DB::beginTransaction();
         try {
+            // Reverse stock impact properly
+            foreach ($distributionOrder->details as $detail) {
+                $vanStock = \App\Models\DistributorStock::firstOrCreate(
+                    ['distributor_id' => $distributionOrder->distributor_id, 'product_id' => $detail->product_id],
+                    ['quantity' => 0]
+                );
+
+                if ($distributionOrder->order_type === 'sortie') {
+                    // Was Sortie (Load) -> Now Delete -> Reverse: Decrease Van Stock
+                    $vanStock->decrement('quantity', $detail->quantity);
+                } else {
+                    // Was Entree (Return) -> Now Delete -> Reverse: Increase Van Stock
+                    $vanStock->increment('quantity', $detail->quantity);
+                }
+            }
+
             // Delete details first
             $distributionOrder->details()->delete();
             
@@ -148,9 +212,49 @@ class DistributionOrderController extends Controller
      * Get next order number for current year
      * Format: YYYY + 5-digit sequential number (e.g., 202500001, 202500002)
      */
-    public function getNextOrderNumber()
+    public function getNextOrderNumber(Request $request)
     {
         $currentYear = date('Y');
+        $type = $request->query('type'); // sales, entree, sortie (default)
+
+        if ($type === 'sales') {
+             // Sales Receipt format: "S" . YYYY . " " . 00000N
+             // e.g., S2025 000001
+             
+             // Get all receipt numbers for current year
+             $receipts = \App\Models\SalesReceipt::withoutTrashed()
+                 ->where('receipt_number', 'like', 'S' . $currentYear . '%')
+                 ->pluck('receipt_number')
+                 ->toArray();
+             
+             $nextNumber = 1;
+             
+             foreach ($receipts as $receiptNumber) {
+                 // Match S2025 000001
+                 if (preg_match('/^S' . $currentYear . ' (\d{6})$/', $receiptNumber, $matches)) {
+                     $number = intval($matches[1]);
+                     if ($number >= $nextNumber) {
+                         $nextNumber = $number + 1;
+                     }
+                 }
+             }
+             
+             $nextReceiptNumber = 'S' . $currentYear . ' ' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+             
+             // Double check collision
+             $attempts = 0;
+             while (\App\Models\SalesReceipt::withTrashed()->where('receipt_number', $nextReceiptNumber)->exists() && $attempts < 10) {
+                 $nextNumber++;
+                 $nextReceiptNumber = 'S' . $currentYear . ' ' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+                 $attempts++;
+             }
+             
+             return response()->json([
+                 'receipt_number' => $nextReceiptNumber,
+             ]);
+        }
+
+        // Default Distribution Order logic
         
         // Get all order numbers for current year (excluding soft deleted)
         // Use withoutTrashed() to explicitly exclude soft-deleted records
@@ -186,6 +290,7 @@ class DistributionOrderController extends Controller
         
         return response()->json([
             'order_number' => $nextOrderNumber,
+            'receipt_number' => $nextOrderNumber, // Backwards compatibility if needed
         ]);
     }
 

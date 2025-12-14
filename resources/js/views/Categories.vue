@@ -1,8 +1,8 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Categories (الأصناف)</div>
-      <q-btn color="primary" icon="add" label="Add Category" @click="openDialog()" />
+      <div class="text-h4">{{ $t('nav.categories') }}</div>
+      <q-btn color="primary" icon="add" :label="$t('common.add')" @click="openDialog()" />
     </div>
 
     <!-- Search Input -->
@@ -11,7 +11,7 @@
         v-model="searchText"
         outlined
         dense
-        placeholder="Search categories..."
+        :placeholder="$t('common.search') + '...'"
         style="max-width: 400px"
       >
         <template v-slot:prepend>
@@ -31,14 +31,18 @@
       flat
       bordered
       class="rounded-table"
+      :rows-per-page-label="$t('common.rowsPerPage')"
+      :no-data-label="$t('common.noData')"
+      :loading-label="$t('common.loading')"
+      :rows-per-page-options="[10, 25, 50]"
     >
       <template v-slot:body-cell-actions="props">
         <q-td :props="props">
           <q-btn flat dense icon="edit" color="positive" @click="openDialog(props.row)">
-            <q-tooltip>Edit</q-tooltip>
+            <q-tooltip>{{ $t('common.edit') }}</q-tooltip>
           </q-btn>
           <q-btn flat dense icon="delete" color="negative" @click="deleteCategory(props.row)">
-            <q-tooltip>Delete</q-tooltip>
+            <q-tooltip>{{ $t('common.delete') }}</q-tooltip>
           </q-btn>
         </q-td>
       </template>
@@ -48,16 +52,16 @@
     <q-dialog v-model="showDialog">
       <q-card style="min-width: 400px">
         <q-card-section class="bg-primary text-white">
-          <div class="text-h6">{{ editMode ? 'Edit Category' : 'Add Category' }}</div>
+          <div class="text-h6">{{ editMode ? $t('categories.editCategory') : $t('categories.newCategory') }}</div>
         </q-card-section>
 
         <q-card-section>
           <q-form @submit="saveCategory">
-            <q-input v-model="form.name" label="Category Name" outlined dense class="q-mb-md" :rules="[val => !!val || 'Required']" />
+            <q-input v-model="form.name" :label="$t('categories.name')" outlined dense class="q-mb-md" :rules="[val => !!val || $t('messages.required')]" />
 
             <div class="row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat @click="showDialog = false" />
-              <q-btn type="submit" label="Save" color="primary" :loading="saving" />
+              <q-btn :label="$t('common.cancel')" flat @click="showDialog = false" />
+              <q-btn type="submit" :label="$t('common.save')" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -69,9 +73,11 @@
 <script setup>
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import api from '../api';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const categories = ref([]);
 const searchText = ref('');
 const loading = ref(false);
@@ -84,10 +90,10 @@ const form = ref({
   name: '',
 });
 
-const columns = [
-  { name: 'name', label: 'Category Name', field: 'name', align: 'left', sortable: true },
-  { name: 'actions', label: 'Actions', field: 'actions', align: 'center' },
-];
+const columns = computed(() => [
+  { name: 'name', label: t('distributors.name'), field: 'name', align: 'left', sortable: true },
+  { name: 'actions', label: t('common.actions'), field: 'actions', align: 'center' },
+]);
 
 // Computed property for filtered categories
 const filteredCategories = computed(() => {
@@ -107,7 +113,7 @@ const loadCategories = async () => {
     const response = await api.get('/categories');
     categories.value = response.data;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load categories' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -134,11 +140,11 @@ const saveCategory = async () => {
     } else {
       await api.post('/categories', form.value);
     }
-    $q.notify({ type: 'positive', message: 'Category saved successfully' });
+    $q.notify({ type: 'positive', message: t('messages.savedSuccessfully') });
     showDialog.value = false;
     loadCategories();
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to save category' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -146,16 +152,25 @@ const saveCategory = async () => {
 
 const deleteCategory = async (category) => {
   $q.dialog({
-    title: 'Confirm',
-    message: `Delete category "${category.name}"?`,
+    title: t('common.confirm'),
+    message: t('messages.confirmDelete'),
     cancel: true,
+    persistent: true,
+    ok: {
+      label: t('common.delete'),
+      color: 'negative'
+    },
+    cancel: {
+      label: t('common.cancel'),
+      color: 'grey'
+    }
   }).onOk(async () => {
     try {
       await api.delete(`/categories/${category.id}`);
-      $q.notify({ type: 'positive', message: 'Category deleted' });
+      $q.notify({ type: 'positive', message: t('messages.deletedSuccessfully') });
       loadCategories();
     } catch (error) {
-      $q.notify({ type: 'negative', message: 'Failed to delete category' });
+      $q.notify({ type: 'negative', message: t('messages.failedToDelete') });
     }
   });
 };

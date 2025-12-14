@@ -75,6 +75,8 @@ class ProductController extends Controller
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'barcode' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'product_code' => 'nullable|string|max:255',
+            'product_family_id' => 'nullable|exists:product_families,id',
         ]);
 
         DB::beginTransaction();
@@ -86,6 +88,9 @@ class ProductController extends Controller
                 'current_stock_quantity' => $request->current_stock_quantity,
                 'barcode' => $request->barcode,
                 'category_id' => $request->category_id,
+                'product_code' => $request->product_code,
+                'product_family_id' => $request->product_family_id,
+                'cmup_cost' => $request->initial_cost ?? 0,
             ]);
 
             ProductPrice::create([
@@ -120,6 +125,8 @@ class ProductController extends Controller
             'current_stock_quantity' => 'sometimes|required|numeric|min:0',
             'barcode' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'product_code' => 'nullable|string|max:255',
+            'product_family_id' => 'nullable|exists:product_families,id',
         ]);
 
         $product->update($request->only([
@@ -127,8 +134,11 @@ class ProductController extends Controller
             'product_description',
             'unit_id', 
             'current_stock_quantity',
+            'current_stock_quantity',
             'barcode',
-            'category_id'
+            'category_id',
+            'product_code',
+            'product_family_id'
         ]));
         
         return response()->json($product->load('currentPrice', 'category', 'unit'));

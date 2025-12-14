@@ -1,8 +1,8 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Delivery Notes (إذن خروج)</div>
-      <q-btn color="positive" icon="add" label="New Delivery Note" @click="openDialog" />
+      <div class="text-h4">{{ $t('nav.deliveryNotes') }}</div>
+      <q-btn color="positive" icon="add" :label="$t('transfers.newTransfer')" @click="openDialog" />
     </div>
 
     <!-- Filters -->
@@ -11,7 +11,7 @@
         v-model="searchText"
         outlined
         dense
-        placeholder="Search delivery notes..."
+        :placeholder="$t('common.search') + '...'"
         style="max-width: 300px"
       >
         <template v-slot:prepend>
@@ -29,7 +29,7 @@
         option-value="id"
         outlined
         dense
-        label="Distributor"
+        :label="$t('sales.distributor')"
         style="max-width: 300px"
         clearable
       />
@@ -46,6 +46,9 @@
       flat
       bordered
       class="rounded-table"
+      :rows-per-page-label="$t('common.rowsPerPage')"
+      :no-data-label="$t('common.noData')"
+      :loading-label="$t('common.loading')"
       :rows-per-page-options="[10, 25, 50]"
     >
       <template v-slot:body-cell-distributor="props">
@@ -66,13 +69,13 @@
       <template v-slot:body-cell-actions="props">
         <q-td :props="props">
           <q-btn flat dense icon="visibility" color="primary" @click="viewDetails(props.row)">
-            <q-tooltip>View Details</q-tooltip>
+            <q-tooltip>{{ $t('common.view') }}</q-tooltip>
           </q-btn>
           <q-btn flat dense icon="edit" color="positive" @click="editOrder(props.row)">
-            <q-tooltip>Edit</q-tooltip>
+            <q-tooltip>{{ $t('common.edit') }}</q-tooltip>
           </q-btn>
           <q-btn flat dense icon="delete" color="negative" @click="deleteOrder(props.row)">
-            <q-tooltip>Delete</q-tooltip>
+            <q-tooltip>{{ $t('common.delete') }}</q-tooltip>
           </q-btn>
         </q-td>
       </template>
@@ -84,7 +87,7 @@
         <q-card-section class="bg-primary text-white">
           <div class="row items-center justify-between">
             <div class="text-h6">
-              {{ editMode ? 'Edit' : 'New' }} Delivery Note
+              {{ editMode ? $t('common.edit') : $t('common.add') }} {{ $t('nav.deliveryNotes') }}
             </div>
             <q-btn flat round dense icon="close" @click="closeDialog" />
           </div>
@@ -101,35 +104,35 @@
                   option-value="id"
                   emit-value
                   map-options
-                  label="Distributor (الموزع) *"
+                  :label="$t('sales.distributor') + ' *'"
                   outlined
                   dense
-                  :rules="[val => !!val || 'Required']"
+                  :rules="[val => !!val || $t('messages.required')]"
                 />
               </div>
               <div class="col-4">
                 <q-input
                   v-model="form.order_number"
-                  label="Order Number (رقم الأمر) *"
+                  :label="$t('transfers.transferNumber') + ' *'"
                   outlined
                   dense
-                  :rules="[val => !!val || 'Required']"
+                  :rules="[val => !!val || $t('messages.required')]"
                 />
               </div>
               <div class="col-4">
                 <q-input
                   v-model="form.order_date"
-                  label="Order Date (تاريخ الأمر) *"
+                  :label="$t('common.date') + ' *'"
                   type="date"
                   outlined
                   dense
-                  :rules="[val => !!val || 'Required']"
+                  :rules="[val => !!val || $t('messages.required')]"
                 />
               </div>
               <div class="col-12">
                 <q-input
                   v-model="form.notes"
-                  label="Notes (ملاحظات)"
+                  :label="$t('common.notes')"
                   outlined
                   dense
                   type="textarea"
@@ -141,8 +144,8 @@
             <!-- Items Section -->
             <div class="q-mt-md">
               <div class="row items-center justify-between q-mb-sm">
-                <div class="text-h6">Items (المنتجات)</div>
-                <q-btn color="primary" icon="add" label="Add Item" @click="addItem" />
+                <div class="text-h6">{{ $t('common.items') }}</div>
+                <q-btn color="primary" icon="add" :label="$t('common.add')" @click="addItem" />
               </div>
 
               <q-table
@@ -151,6 +154,8 @@
                 row-key="id"
                 flat
                 bordered
+                :no-data-label="$t('common.noData')"
+                :rows-per-page-label="$t('common.rowsPerPage')"
               >
                 <template v-slot:body-cell-product="props">
                   <q-td :props="props" :class="{ 'text-red': getProductStock(props.row.product_id, props.row) === 0 }">
@@ -186,7 +191,7 @@
                       <template v-slot:no-option>
                         <q-item>
                           <q-item-section class="text-grey">
-                            No products available
+                            {{ $t('products.noDataFound') }}
                           </q-item-section>
                         </q-item>
                       </template>
@@ -222,8 +227,8 @@
             </div>
 
             <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancel" flat @click="closeDialog" />
-              <q-btn type="submit" label="Save" color="primary" :loading="saving" />
+              <q-btn :label="$t('common.cancel')" flat @click="closeDialog" />
+              <q-btn type="submit" :label="$t('common.save')" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -237,12 +242,12 @@
         <q-card-section class="invoice-header q-pa-none">
           <div class="row items-center justify-between q-pa-md">
             <q-btn flat dense icon="close" @click="showDetailsDialog = false" />
-            <div class="text-h6">Delivery Note (وصل إخراج السلع)</div>
+            <div class="text-h6">{{ $t('deliveryNotes.documentTitle') }}</div>
             <q-btn 
               flat 
               dense 
-              icon="picture_as_pdf" 
-              label="Save as PDF" 
+              :icon="$q.lang.rtl ? 'picture_as_pdf' : 'picture_as_pdf'" 
+              :label="$t('deliveryNotes.saveAsPdf')" 
               color="primary"
               @click="saveAsPDF"
               :loading="pdfLoading"
@@ -256,16 +261,16 @@
             <div class="row items-start justify-between">
               <!-- Left: Date and Order Number -->
               <div class="col-3">
-                <div class="invoice-label q-mb-xs">DATE</div>
+                <div class="invoice-label q-mb-xs">{{ $t('deliveryNotes.date') }}</div>
                 <div class="invoice-value">{{ formatDate(selectedOrder.order_date) }}</div>
-                <div class="invoice-label q-mt-md q-mb-xs">ORDER NO</div>
+                <div class="invoice-label q-mt-md q-mb-xs">{{ $t('deliveryNotes.orderNo') }}</div>
                 <div class="invoice-value">{{ selectedOrder.order_number }}</div>
               </div>
 
               <!-- Center: Company Name -->
               <div class="col-5 text-center">
-                <div class="text-h4 text-weight-bold q-mb-md">DELIVERY NOTE</div>
-                <div class="company-name text-weight-bold">{{ companySettings.company_name || 'YOUR COMPANY' }}</div>
+                <div class="text-h4 text-weight-bold q-mb-md">{{ $t('deliveryNotes.documentTitle') }}</div>
+                <div class="company-name text-weight-bold">{{ companySettings.company_name || $t('deliveryNotes.company') }}</div>
               </div>
 
               <!-- Right: Logo -->
@@ -275,7 +280,7 @@
                 </div>
                 <div v-else class="logo-placeholder q-mb-md">
                   <q-icon name="business" size="80px" color="grey-4" />
-                  <div class="text-caption text-grey-6">Logo Name</div>
+                  <div class="text-caption text-grey-6">{{ $t('deliveryNotes.logoName') }}</div>
                 </div>
               </div>
             </div>
@@ -286,22 +291,22 @@
             <div class="row q-col-gutter-md">
               <!-- Company Info -->
               <div class="col-6">
-                <div class="invoice-label q-mb-xs">YOUR COMPANY</div>
+                <div class="invoice-label q-mb-xs">{{ $t('deliveryNotes.company') }}</div>
                 <div class="invoice-info">
                   <div v-if="companySettings.address">{{ companySettings.address }}</div>
-                  <div v-if="companySettings.phone">Phone: {{ companySettings.phone }}</div>
-                  <div v-if="companySettings.email">Email: {{ companySettings.email }}</div>
+                  <div v-if="companySettings.phone">{{ $t('deliveryNotes.phone') }}: {{ companySettings.phone }}</div>
+                  <div v-if="companySettings.email">{{ $t('deliveryNotes.email') }}: {{ companySettings.email }}</div>
                 </div>
               </div>
 
               <!-- Distributor Info -->
               <div class="col-6 text-right">
-                <div class="invoice-label q-mb-xs">DISTRIBUTOR</div>
+                <div class="invoice-label q-mb-xs">{{ $t('deliveryNotes.distributor') }}</div>
                 <div class="invoice-info">
                   <div class="text-weight-bold">{{ selectedOrder.distributor?.name || 'N/A' }}</div>
-                  <div v-if="selectedOrder.distributor?.phone">Phone: {{ selectedOrder.distributor.phone }}</div>
-                  <div v-if="selectedOrder.distributor?.vehicle_plate">Vehicle: {{ selectedOrder.distributor.vehicle_plate }}</div>
-                  <div v-if="selectedOrder.distributor?.vehicle_type">Type: {{ selectedOrder.distributor.vehicle_type }}</div>
+                  <div v-if="selectedOrder.distributor?.phone">{{ $t('deliveryNotes.phone') }}: {{ selectedOrder.distributor.phone }}</div>
+                  <div v-if="selectedOrder.distributor?.vehicle_plate">{{ $t('deliveryNotes.vehicle') }}: {{ selectedOrder.distributor.vehicle_plate }}</div>
+                  <div v-if="selectedOrder.distributor?.vehicle_type">{{ $t('deliveryNotes.type') }}: {{ selectedOrder.distributor.vehicle_type }}</div>
                 </div>
               </div>
             </div>
@@ -311,11 +316,11 @@
           <div class="transaction-bar delivery-note-bar">
             <div class="row">
               <div class="col-3">
-                <div class="transaction-label">ORDER TYPE</div>
-                <div class="transaction-value">Delivery (إخراج)</div>
+                <div class="transaction-label">{{ $t('deliveryNotes.orderType') }}</div>
+                <div class="transaction-value">{{ $t('deliveryNotes.deliveryInfo') }}</div>
               </div>
               <div class="col-3">
-                <div class="transaction-label">ORDER DATE</div>
+                <div class="transaction-label">{{ $t('deliveryNotes.orderDate') }}</div>
                 <div class="transaction-value">{{ formatDate(selectedOrder.order_date) }}</div>
               </div>
             </div>
@@ -327,9 +332,9 @@
               <thead>
                 <tr>
                   <th style="width: 5%">#</th>
-                  <th style="width: 55%">DESCRIPTION</th>
-                  <th style="width: 20%" class="text-right">QUANTITY</th>
-                  <th style="width: 20%" class="text-right">UNIT</th>
+                  <th style="width: 55%">{{ $t('deliveryNotes.description') }}</th>
+                  <th style="width: 20%" class="text-right">{{ $t('deliveryNotes.quantity') }}</th>
+                  <th style="width: 20%" class="text-right">{{ $t('deliveryNotes.unit') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -348,7 +353,7 @@
             </table>
           </div>
           <div v-else class="text-center q-pa-md text-grey-6">
-            No items in this delivery note
+            {{ $t('deliveryNotes.noItems') }}
           </div>
 
           <!-- Totals Section -->
@@ -356,11 +361,11 @@
             <div class="row justify-end">
               <div class="totals-box delivery-note-totals">
                 <div class="total-row">
-                  <span class="total-label">Total Items</span>
+                  <span class="total-label">{{ $t('deliveryNotes.totalItems') }}</span>
                   <span class="total-value">{{ selectedOrder.details?.length || 0 }}</span>
                 </div>
                 <div class="total-row">
-                  <span class="total-label">Total Quantity</span>
+                  <span class="total-label">{{ $t('deliveryNotes.totalQuantity') }}</span>
                   <span class="total-value final">{{ getTotalQuantity().toFixed(2) }}</span>
                 </div>
               </div>
@@ -369,15 +374,15 @@
 
           <!-- Notes Section -->
           <div class="invoice-notes-section" v-if="selectedOrder.notes">
-            <div class="invoice-label q-mb-xs">NOTES</div>
+            <div class="invoice-label q-mb-xs">{{ $t('deliveryNotes.notes') }}</div>
             <div class="invoice-notes">{{ selectedOrder.notes }}</div>
           </div>
         </q-card-section>
 
         <q-card-actions align="right" class="invoice-actions">
-          <q-btn label="Close" flat @click="showDetailsDialog = false" />
+          <q-btn :label="$t('deliveryNotes.close')" flat @click="showDetailsDialog = false" />
           <q-btn 
-            label="Save as PDF" 
+            :label="$t('deliveryNotes.saveAsPdf')" 
             icon="picture_as_pdf" 
             color="primary"
             @click="saveAsPDF"
@@ -392,11 +397,13 @@
 <script setup>
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import api from '../api';
 import '../styles/invoice.css';
 import { formatDate, generateInvoiceFileName, getLogoUrl } from '../utils/invoiceUtils';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const orders = ref([]);
 const distributors = ref([]);
 const products = ref([]);
@@ -425,24 +432,24 @@ const form = ref({
   items: [],
 });
 
-const columns = [
-  { name: 'order_number', label: 'Order Number', field: 'order_number', align: 'left', sortable: true },
-  { name: 'distributor', label: 'Distributor', field: 'distributor', align: 'left' },
-  { name: 'order_date', label: 'Date', field: 'order_date', align: 'left', sortable: true },
-  { name: 'items_count', label: 'Products Count (عدد المنتجات)', field: 'details_count', align: 'center', sortable: true },
-  { name: 'actions', label: 'Actions', field: 'actions', align: 'center', sortable: false },
-];
+const columns = computed(() => [
+  { name: 'order_number', label: t('transfers.transferNumber'), field: 'order_number', align: 'left', sortable: true },
+  { name: 'distributor', label: t('sales.distributor'), field: 'distributor', align: 'left' },
+  { name: 'order_date', label: t('common.date'), field: 'order_date', align: 'left', sortable: true },
+  { name: 'items_count', label: t('sales.itemsCount'), field: 'details_count', align: 'center', sortable: true },
+  { name: 'actions', label: t('common.actions'), field: 'actions', align: 'center', sortable: false },
+]);
 
-const itemColumns = [
-  { name: 'product', label: 'Product', field: 'product', align: 'left' },
-  { name: 'quantity', label: 'Quantity', field: 'quantity', align: 'left' },
-  { name: 'actions', label: 'Actions', field: 'actions', align: 'center' },
-];
+const itemColumns = computed(() => [
+  { name: 'product', label: t('products.name'), field: 'product', align: 'left' },
+  { name: 'quantity', label: t('sales.quantity'), field: 'quantity', align: 'left' },
+  { name: 'actions', label: t('common.actions'), field: 'actions', align: 'center' },
+]);
 
-const detailColumns = [
-  { name: 'product', label: 'Product', field: 'product', align: 'left' },
-  { name: 'quantity', label: 'Quantity', field: 'quantity', align: 'left' },
-];
+const detailColumns = computed(() => [
+  { name: 'product', label: t('products.name'), field: 'product', align: 'left' },
+  { name: 'quantity', label: t('sales.quantity'), field: 'quantity', align: 'left' },
+]);
 
 // Base products list (only products with stock > 0)
 const baseProductsList = computed(() => {
@@ -492,7 +499,7 @@ const loadOrders = async () => {
     const response = await api.get('/distribution-orders', { params: { order_type: 'sortie' } });
     orders.value = response.data;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load delivery notes' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -503,7 +510,7 @@ const loadDistributors = async () => {
     const response = await api.get('/distributors');
     distributors.value = response.data;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load distributors' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   }
 };
 
@@ -513,7 +520,7 @@ const loadProducts = async () => {
     products.value = response.data;
     productOptions.value = baseProductsList.value;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load products' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   }
 };
 
@@ -526,7 +533,7 @@ const openDialog = async () => {
     const response = await api.get('/distribution-orders/next-number');
     nextOrderNumber = response.data.order_number;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to get next order number' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   }
   
   form.value = {
@@ -738,7 +745,7 @@ const validateQuantity = (item, quantity) => {
     item.quantity = stock;
     $q.notify({
       type: 'warning',
-      message: `لا يمكن إضافة كمية أكبر من المخزون المتاح (${stock})`,
+      message: `${t('messages.quantityCannotExceedStock')} (${stock})`,
       timeout: 3000,
     });
     return;
@@ -811,19 +818,19 @@ const saveOrder = async () => {
       : form.value.distributor_id;
     
     if (!distributorId) {
-      $q.notify({ type: 'negative', message: 'Please select a distributor' });
+      $q.notify({ type: 'negative', message: t('messages.selectDistributor') });
       saving.value = false;
       return;
     }
 
     if (!form.value.order_number || form.value.order_number.trim() === '') {
-      $q.notify({ type: 'negative', message: 'Please enter an order number' });
+      $q.notify({ type: 'negative', message: t('messages.enterOrderNumber') });
       saving.value = false;
       return;
     }
 
     if (!form.value.order_date) {
-      $q.notify({ type: 'negative', message: 'Please select an order date' });
+      $q.notify({ type: 'negative', message: t('messages.selectOrderDate') });
       saving.value = false;
       return;
     }
@@ -837,7 +844,7 @@ const saveOrder = async () => {
       }));
 
     if (validItems.length === 0) {
-      $q.notify({ type: 'negative', message: 'Please add at least one item to the delivery note' });
+      $q.notify({ type: 'negative', message: t('messages.addAtLeastOneItem') });
       saving.value = false;
       return;
     }
@@ -859,7 +866,7 @@ const saveOrder = async () => {
       await api.post('/distribution-orders', payload);
     }
 
-    $q.notify({ type: 'positive', message: 'Delivery note saved successfully' });
+    $q.notify({ type: 'positive', message: t('messages.savedSuccessfully') });
     closeDialog();
     loadOrders();
   } catch (error) {
@@ -874,7 +881,7 @@ const saveOrder = async () => {
         .join('\n');
       $q.notify({ 
         type: 'negative', 
-        message: `Validation errors:\n${errorMessages}`,
+        message: `${t('messages.validationErrors')}:\n${errorMessages}`,
         multiLine: true,
         timeout: 5000
       });
@@ -885,7 +892,7 @@ const saveOrder = async () => {
         || 'Failed to save delivery note';
       $q.notify({ 
         type: 'negative', 
-        message: errorMessage,
+        message: errorMessage || t('messages.failedToSave'),
         timeout: 5000
       });
     }
@@ -916,7 +923,7 @@ const editOrder = async (order) => {
     productOptions.value = baseProductsList.value;
     showDialog.value = true;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load delivery note for editing' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -931,7 +938,7 @@ const viewDetails = async (order) => {
     showDetailsDialog.value = true;
   } catch (error) {
     console.error('Failed to load order details:', error);
-    $q.notify({ type: 'negative', message: 'Failed to load order details' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadOrderDetails') });
   } finally {
     loading.value = false;
   }
@@ -945,10 +952,10 @@ const deleteOrder = async (order) => {
   }).onOk(async () => {
     try {
       await api.delete(`/distribution-orders/${order.id}`);
-      $q.notify({ type: 'positive', message: 'Delivery note deleted' });
+      $q.notify({ type: 'positive', message: t('messages.deletedSuccessfully') });
       loadOrders();
     } catch (error) {
-      $q.notify({ type: 'negative', message: 'Failed to delete delivery note' });
+      $q.notify({ type: 'negative', message: t('messages.failedToDelete') });
     }
   });
 };
@@ -983,14 +990,14 @@ const saveAsPDF = async () => {
   try {
     const deliveryNoteContent = document.getElementById('delivery-note-content');
     if (!deliveryNoteContent) {
-      $q.notify({ type: 'negative', message: 'Delivery note content not found' });
+      $q.notify({ type: 'negative', message: t('messages.deliveryNoteContentNotFound') });
       pdfLoading.value = false;
       return;
     }
 
     $q.notify({
       type: 'info',
-      message: 'Generating PDF...',
+      message: t('messages.generatingPdf'),
       timeout: 2000
     });
 
@@ -1012,14 +1019,14 @@ const saveAsPDF = async () => {
 
     $q.notify({
       type: 'positive',
-      message: 'PDF generated successfully',
+      message: t('messages.pdfGenerated'),
       timeout: 2000
     });
   } catch (error) {
     console.error('Error generating PDF:', error);
     $q.notify({
       type: 'negative',
-      message: 'Failed to generate PDF: ' + (error.message || 'Unknown error'),
+      message: t('messages.failedToGeneratePdf') + ': ' + (error.message || 'Unknown error'),
       timeout: 5000
     });
   } finally {

@@ -1,17 +1,17 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Inventory (المخزون)</div>
+      <div class="text-h4">{{ $t('nav.inventory') }}</div>
       <div class="row q-gutter-sm">
         <q-btn 
           v-if="filteredInventory.length > 0"
           color="orange" 
           icon="picture_as_pdf" 
-          label="Inventory Check PDF" 
+          :label="$t('inventory.inventoryCheckPdf')" 
           :loading="generatingPdf"
           @click="printInventoryCheckSheet" 
         />
-        <q-btn color="positive" icon="download" label="Export to Excel" @click="exportToExcel" />
+        <q-btn color="positive" icon="download" :label="$t('inventory.exportToExcel')" @click="exportToExcel" />
       </div>
     </div>
 
@@ -20,7 +20,7 @@
       <div class="col-12 col-md-3">
         <q-card class="bg-primary text-white">
           <q-card-section>
-            <div class="text-h6">Total Products</div>
+            <div class="text-h6">{{ $t('inventory.totalProducts') }}</div>
             <div class="text-h4">{{ statistics.totalProducts }}</div>
           </q-card-section>
         </q-card>
@@ -28,7 +28,7 @@
       <div class="col-12 col-md-3">
         <q-card class="bg-positive text-white">
           <q-card-section>
-            <div class="text-h6">In Stock</div>
+            <div class="text-h6">{{ $t('inventory.inStock') }}</div>
             <div class="text-h4">{{ statistics.inStock }}</div>
           </q-card-section>
         </q-card>
@@ -36,7 +36,7 @@
       <div class="col-12 col-md-3">
         <q-card class="bg-warning text-white">
           <q-card-section>
-            <div class="text-h6">Low Stock</div>
+            <div class="text-h6">{{ $t('inventory.lowStock') }}</div>
             <div class="text-h4">{{ statistics.lowStock }}</div>
           </q-card-section>
         </q-card>
@@ -44,7 +44,7 @@
       <div class="col-12 col-md-3">
         <q-card class="bg-negative text-white">
           <q-card-section>
-            <div class="text-h6">Out of Stock</div>
+            <div class="text-h6">{{ $t('inventory.outOfStock') }}</div>
             <div class="text-h4">{{ statistics.outOfStock }}</div>
           </q-card-section>
         </q-card>
@@ -57,7 +57,7 @@
         v-model="searchText"
         outlined
         dense
-        placeholder="Search products..."
+        :placeholder="$t('inventory.searchProducts')"
         style="min-width: 300px"
       >
         <template v-slot:prepend>
@@ -70,7 +70,7 @@
         :options="stockFilterOptions"
         option-value="value"
         option-label="label"
-        label="Stock Status"
+        :label="$t('inventory.stockStatus')"
         outlined
         dense
         emit-value
@@ -84,7 +84,7 @@
         :options="categoryOptions"
         option-value="value"
         option-label="label"
-        label="Category"
+        :label="$t('inventory.category')"
         outlined
         dense
         emit-value
@@ -98,14 +98,11 @@
       <q-btn-toggle
         v-model="viewMode"
         toggle-color="primary"
-        :options="[
-          { label: 'Table', value: 'table', icon: 'table_chart' },
-          { label: 'Cards', value: 'cards', icon: 'view_module' }
-        ]"
+        :options="viewModeOptions"
       />
 
       <q-btn flat round dense icon="download" color="positive" @click="exportToExcel">
-        <q-tooltip>Export to Excel</q-tooltip>
+        <q-tooltip>{{ $t('inventory.exportToExcel') }}</q-tooltip>
       </q-btn>
     </div>
 
@@ -113,7 +110,7 @@
     <div v-if="viewMode === 'cards'">
       <div v-if="filteredInventory.length === 0" class="text-center q-pa-xl">
         <q-icon name="inventory_2" size="64px" color="grey-4" />
-        <div class="text-h6 text-grey-6 q-mt-md">No products found</div>
+        <div class="text-h6 text-grey-6 q-mt-md">{{ $t('inventory.noProductsFound') }}</div>
       </div>
       <div v-else class="row q-col-gutter-md">
         <div
@@ -142,7 +139,7 @@
                       <q-item-section avatar>
                         <q-icon name="info" />
                       </q-item-section>
-                      <q-item-section>View Details</q-item-section>
+                      <q-item-section>{{ $t('inventory.viewDetails') }}</q-item-section>
                     </q-item>
                   </q-list>
                 </q-menu>
@@ -154,7 +151,7 @@
             <!-- Stock Quantity and Trend -->
             <div class="row items-center q-mb-sm">
               <div class="col">
-                <div class="text-caption text-grey-7">Stock Quantity</div>
+                <div class="text-caption text-grey-7">{{ $t('inventory.stockQuantity') }}</div>
                 <div class="text-h6" :class="getStockQuantityClass(item.current_stock_quantity)">
                   {{ formatQuantity(item.current_stock_quantity) }}
                 </div>
@@ -170,7 +167,7 @@
             <!-- Committed Quantity -->
             <div class="row items-center q-mb-sm">
               <div class="col">
-                <div class="text-caption text-grey-7">In Distribution</div>
+                <div class="text-caption text-grey-7">{{ $t('inventory.inDistribution') }}</div>
                 <div class="text-weight-bold">
                   {{ formatQuantity(item.committed_quantity || 0) }}
                 </div>
@@ -179,7 +176,7 @@
 
             <!-- Stock Trend Chart -->
             <div class="q-mb-sm">
-              <div class="text-caption text-grey-7 q-mb-xs">Stock Trend (12M)</div>
+              <div class="text-caption text-grey-7 q-mb-xs">{{ $t('inventory.stockTrend') }}</div>
               <div style="width: 100%; height: 60px; display: block;">
                 <svg viewBox="0 0 120 40" style="width: 100%; height: 100%;" preserveAspectRatio="none">
                   <polyline
@@ -196,16 +193,16 @@
             <!-- Purchase Price and Trend -->
             <div class="row items-center q-mb-sm">
               <div class="col">
-                <div class="text-caption text-grey-7">Purchase Price</div>
+                <div class="text-caption text-grey-7">{{ $t('inventory.purchasePrice') }}</div>
                 <div class="text-weight-bold">
-                  {{ item.purchasePriceHistory?.current_price ? formatCurrency(item.purchasePriceHistory.current_price) : 'N/A' }}
+                  {{ item.purchasePriceHistory?.current_price ? formatCurrency(item.purchasePriceHistory.current_price) : $t('inventory.na') }}
                 </div>
               </div>
             </div>
 
             <!-- Price Trend Chart -->
             <div class="q-mb-sm">
-              <div class="text-caption text-grey-7 q-mb-xs">Price Trend (12M)</div>
+              <div class="text-caption text-grey-7 q-mb-xs">{{ $t('inventory.priceTrend') }}</div>
               <div style="width: 100%; height: 60px; display: block;">
                 <svg viewBox="0 0 120 40" style="width: 100%; height: 100%;" preserveAspectRatio="none">
                   <polyline
@@ -222,9 +219,9 @@
             <!-- Sale Price -->
             <div class="row items-center">
               <div class="col">
-                <div class="text-caption text-grey-7">Sale Price (Wholesale)</div>
+                <div class="text-caption text-grey-7">{{ $t('inventory.salePriceWholesale') }}</div>
                 <div class="text-weight-bold">
-                  {{ item.currentPrice ? formatCurrency(item.currentPrice.wholesale_price) : 'N/A' }}
+                  {{ item.currentPrice ? formatCurrency(item.currentPrice.wholesale_price) : $t('inventory.na') }}
                 </div>
               </div>
             </div>
@@ -244,6 +241,9 @@
       flat
       bordered
       class="rounded-table"
+      :rows-per-page-label="$t('common.rowsPerPage')"
+      :no-data-label="$t('common.noData')"
+      :loading-label="$t('common.loading')"
       v-model:pagination="pagination"
       :rows-per-page-options="[10, 25, 50, 100]"
     >
@@ -295,7 +295,7 @@
           <div v-if="props.row.purchasePriceHistory?.current_price" class="text-weight-bold">
             {{ formatCurrency(props.row.purchasePriceHistory.current_price) }}
           </div>
-          <div v-else class="text-grey-6">N/A</div>
+          <div v-else class="text-grey-6">{{ $t('inventory.na') }}</div>
         </q-td>
       </template>
 
@@ -319,9 +319,9 @@
         <q-td :props="props">
           <div v-if="props.row.currentPrice" class="text-right">
             <div class="text-weight-bold">{{ formatCurrency(props.row.currentPrice.wholesale_price) }}</div>
-            <div class="text-caption text-grey-6">Wholesale</div>
+            <div class="text-caption text-grey-6">{{ $t('inventory.wholesale') }}</div>
           </div>
-          <div v-else class="text-grey-6">N/A</div>
+          <div v-else class="text-grey-6">{{ $t('inventory.na') }}</div>
         </q-td>
       </template>
 
@@ -341,7 +341,7 @@
                   <q-item-section avatar>
                     <q-icon name="info" />
                   </q-item-section>
-                  <q-item-section>View Details</q-item-section>
+                  <q-item-section>{{ $t('inventory.viewDetails') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -355,35 +355,35 @@
     <q-dialog v-model="showDetailsDialog">
       <q-card style="min-width: 500px; max-width: 700px">
         <q-card-section class="bg-primary text-white">
-          <div class="text-h6">Product Details</div>
+          <div class="text-h6">{{ $t('products.productDetails') }}</div>
         </q-card-section>
 
         <q-card-section v-if="selectedProduct">
           <div class="row q-col-gutter-md">
             <div class="col-12">
-              <div class="text-subtitle2 text-grey-7">Product Name</div>
+              <div class="text-subtitle2 text-grey-7">{{ $t('products.name') }}</div>
               <div class="text-h6">{{ selectedProduct.name }}</div>
             </div>
 
             <div class="col-6">
-              <div class="text-subtitle2 text-grey-7">Category</div>
+              <div class="text-subtitle2 text-grey-7">{{ $t('products.category') }}</div>
               <div>{{ selectedProduct.category?.name || 'N/A' }}</div>
             </div>
 
             <div class="col-6">
-              <div class="text-subtitle2 text-grey-7">Unit</div>
+              <div class="text-subtitle2 text-grey-7">{{ $t('products.unit') }}</div>
               <div>{{ selectedProduct.unit?.name || selectedProduct.unit?.name_en || 'N/A' }}</div>
             </div>
 
             <div class="col-6">
-              <div class="text-subtitle2 text-grey-7">Current Stock</div>
+              <div class="text-subtitle2 text-grey-7">{{ $t('products.currentStock') }}</div>
               <div class="text-h6" :class="getStockQuantityClass(selectedProduct.current_stock_quantity)">
                 {{ formatQuantity(selectedProduct.current_stock_quantity) }}
               </div>
             </div>
 
             <div class="col-6">
-              <div class="text-subtitle2 text-grey-7">Stock Status</div>
+              <div class="text-subtitle2 text-grey-7">{{ $t('inventory.stockStatus') }}</div>
               <q-badge
                 :color="getStockStatusColor(selectedProduct.stock_status)"
                 :label="selectedProduct.stock_status"
@@ -393,37 +393,37 @@
 
             <div class="col-12" v-if="selectedProduct.currentPrice">
               <q-separator class="q-my-md" />
-              <div class="text-subtitle2 text-grey-7 q-mb-sm">Current Prices</div>
+              <div class="text-subtitle2 text-grey-7 q-mb-sm">{{ $t('products.currentPrices') }}</div>
               <div class="row q-col-gutter-sm">
                 <div class="col-4">
-                  <div class="text-caption text-grey-6">Wholesale</div>
+                  <div class="text-caption text-grey-6">{{ $t('sales.wholesale') }}</div>
                   <div class="text-weight-bold">{{ formatCurrency(selectedProduct.currentPrice.wholesale_price) }}</div>
                 </div>
                 <div class="col-4">
-                  <div class="text-caption text-grey-6">Semi-Wholesale</div>
+                  <div class="text-caption text-grey-6">{{ $t('sales.semiWholesale') }}</div>
                   <div class="text-weight-bold">{{ formatCurrency(selectedProduct.currentPrice.semi_wholesale_price) }}</div>
                 </div>
                 <div class="col-4">
-                  <div class="text-caption text-grey-6">Retail</div>
+                  <div class="text-caption text-grey-6">{{ $t('sales.retail') }}</div>
                   <div class="text-weight-bold">{{ formatCurrency(selectedProduct.currentPrice.retail_price) }}</div>
                 </div>
               </div>
             </div>
 
             <div class="col-12" v-if="selectedProduct.barcode">
-              <div class="text-subtitle2 text-grey-7">Barcode</div>
+              <div class="text-subtitle2 text-grey-7">{{ $t('products.barcode') }}</div>
               <div>{{ selectedProduct.barcode }}</div>
             </div>
 
             <div class="col-12" v-if="selectedProduct.product_description">
-              <div class="text-subtitle2 text-grey-7">Description</div>
+              <div class="text-subtitle2 text-grey-7">{{ $t('products.description') }}</div>
               <div>{{ selectedProduct.product_description }}</div>
             </div>
           </div>
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn label="Close" flat v-close-popup />
+          <q-btn :label="$t('common.close')" flat v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -435,9 +435,11 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import api from '../api';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const loading = ref(false);
 const generatingPdf = ref(false);
 const inventory = ref([]);
@@ -452,25 +454,30 @@ const pagination = ref({
 const showDetailsDialog = ref(false);
 const selectedProduct = ref(null);
 
-const stockFilterOptions = [
-  { label: 'All', value: null },
-  { label: 'In Stock', value: 'In Stock' },
-  { label: 'Low Stock', value: 'Low Stock' },
-  { label: 'Out of Stock', value: 'Out of Stock' },
-];
+const stockFilterOptions = computed(() => [
+  { label: t('common.all'), value: null },
+  { label: t('inventory.inStock'), value: 'In Stock' },
+  { label: t('inventory.lowStock'), value: 'Low Stock' },
+  { label: t('inventory.outOfStock'), value: 'Out of Stock' },
+]);
 
-const columns = [
-  { name: 'name', label: 'Product Name', field: 'name', align: 'left', sortable: true },
-  { name: 'category', label: 'Category', field: row => row.category?.name || 'N/A', align: 'left', sortable: true },
-  { name: 'current_stock_quantity', label: 'Stock Quantity', field: 'current_stock_quantity', align: 'center', sortable: true },
-  { name: 'committed_quantity', label: 'In Distribution', field: row => row.committed_quantity || 0, align: 'center', sortable: true },
-  { name: 'stock_chart', label: 'Stock Trend (12M)', field: 'stock_chart', align: 'center', sortable: false },
-  { name: 'purchase_price', label: 'Purchase Price', field: 'purchase_price', align: 'right', sortable: true },
-  { name: 'price_chart', label: 'Price Trend (12M)', field: 'price_chart', align: 'center', sortable: false },
-  { name: 'price', label: 'Sale Price', field: row => row.currentPrice?.wholesale_price || 0, align: 'right', sortable: true },
-  { name: 'stock_status', label: 'Stock Status', field: 'stock_status', align: 'center', sortable: true },
+const viewModeOptions = computed(() => [
+  { label: t('inventory.table'), value: 'table', icon: 'table_chart' },
+  { label: t('inventory.cards'), value: 'cards', icon: 'view_module' }
+]);
+
+const columns = computed(() => [
+  { name: 'name', label: t('products.name'), field: 'name', align: 'left', sortable: true },
+  { name: 'category', label: t('products.category'), field: row => row.category?.name || 'N/A', align: 'left', sortable: true },
+  { name: 'current_stock_quantity', label: t('products.stock'), field: 'current_stock_quantity', align: 'center', sortable: true },
+  { name: 'committed_quantity', label: t('inventory.inDistribution'), field: row => row.committed_quantity || 0, align: 'center', sortable: true },
+  { name: 'stock_chart', label: t('inventory.stockTrend'), field: 'stock_chart', align: 'center', sortable: false },
+  { name: 'purchase_price', label: t('purchases.purchasePrice'), field: 'purchase_price', align: 'right', sortable: true },
+  { name: 'price_chart', label: t('inventory.priceTrend'), field: 'price_chart', align: 'center', sortable: false },
+  { name: 'price', label: t('products.wholesalePrice'), field: row => row.currentPrice?.wholesale_price || 0, align: 'right', sortable: true },
+  { name: 'stock_status', label: t('common.status'), field: 'stock_status', align: 'center', sortable: true },
   { name: 'actions', label: '', field: 'actions', align: 'center', sortable: false, style: 'width: 50px' },
-];
+]);
 
 const statistics = computed(() => {
   const total = inventory.value.length;
@@ -487,7 +494,7 @@ const statistics = computed(() => {
 });
 
 const categoryOptions = computed(() => {
-  const options = [{ label: 'All Categories', value: null }];
+  const options = [{ label: t('inventory.allCategories'), value: null }];
   categories.value.forEach(cat => {
     options.push({ label: cat.name, value: cat.id });
   });
@@ -547,7 +554,7 @@ const loadInventory = async () => {
     // Load stock history for all products in parallel (after initial load)
     loadStockHistoryForProducts(products);
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load inventory' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -734,7 +741,7 @@ const generatePriceChartPoints = (priceHistory) => {
 
 const printInventoryCheckSheet = async () => {
   if (!filteredInventory.value.length) {
-    $q.notify({ type: 'warning', message: 'No data to generate PDF' });
+    $q.notify({ type: 'warning', message: t('messages.noDataToGeneratePdf') });
     return;
   }
   
@@ -772,41 +779,40 @@ const printInventoryCheckSheet = async () => {
   
   // Create HTML content
   const htmlContent = `
-    <div id="pdf-content" style="width: 794px; padding: 20px; font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; background: white; direction: rtl;">
+    <div id="pdf-content" style="width: 794px; padding: 20px; font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; background: white; direction: ${$q.lang.rtl ? 'rtl' : 'ltr'};">
       <!-- Header -->
       <div style="background: #1976d2; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;">
-        <div style="font-size: 22px; font-weight: bold; margin-bottom: 5px;">ورقة جرد المخزون</div>
-        <div style="font-size: 14px;">Inventory Check Sheet</div>
+        <div style="font-size: 22px; font-weight: bold; margin-bottom: 5px;">${t('inventory.inventoryCheckSheet')}</div>
       </div>
       
       <!-- Info Section -->
       <div style="display: flex; justify-content: space-between; background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-        <div style="text-align: right; min-width: 120px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">التاريخ</div>
+        <div style="text-align: center; min-width: 120px; margin: 5px;">
+          <div style="font-size: 11px; color: #666;">${t('common.date')}</div>
           <div style="font-size: 14px; font-weight: bold;">${today}</div>
         </div>
-        <div style="text-align: right; min-width: 100px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">عدد المنتجات</div>
+        <div style="text-align: center; min-width: 100px; margin: 5px;">
+          <div style="font-size: 11px; color: #666;">${t('inventory.totalProducts')}</div>
           <div style="font-size: 14px; font-weight: bold;">${products.length}</div>
         </div>
-        <div style="text-align: right; min-width: 100px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">إجمالي المخزون</div>
+        <div style="text-align: center; min-width: 100px; margin: 5px;">
+          <div style="font-size: 11px; color: #666;">${t('inventory.stockQuantity')}</div>
           <div style="font-size: 14px; font-weight: bold;">${formatQuantity(totalStock)}</div>
         </div>
-        <div style="text-align: right; min-width: 100px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">في التوزيع</div>
+        <div style="text-align: center; min-width: 100px; margin: 5px;">
+          <div style="font-size: 11px; color: #666;">${t('inventory.inDistribution')}</div>
           <div style="font-size: 14px; font-weight: bold; color: #1976d2;">${formatQuantity(totalCommitted)}</div>
         </div>
-        <div style="text-align: right; min-width: 80px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">متوفر</div>
+        <div style="text-align: center; min-width: 80px; margin: 5px;">
+          <div style="font-size: 11px; color: #666;">${t('inventory.inStock')}</div>
           <div style="font-size: 14px; font-weight: bold; color: #4caf50;">${statistics.value.inStock}</div>
         </div>
-        <div style="text-align: right; min-width: 80px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">منخفض</div>
+        <div style="text-align: center; min-width: 80px; margin: 5px;">
+          <div style="font-size: 11px; color: #666;">${t('inventory.lowStock')}</div>
           <div style="font-size: 14px; font-weight: bold; color: #ff9800;">${statistics.value.lowStock}</div>
         </div>
-        <div style="text-align: right; min-width: 80px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">نفذ</div>
+        <div style="text-align: center; min-width: 80px; margin: 5px;">
+          <div style="font-size: 11px; color: #666;">${t('inventory.outOfStock')}</div>
           <div style="font-size: 14px; font-weight: bold; color: #f44336;">${statistics.value.outOfStock}</div>
         </div>
       </div>
@@ -816,20 +822,20 @@ const printInventoryCheckSheet = async () => {
         <thead>
           <tr style="background: #1976d2; color: white;">
             <th style="padding: 10px; border: 1px solid #1565c0; width: 4%;">#</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; text-align: right; width: 25%;">المنتج</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 12%;">الصنف</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 6%;">الوحدة</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">المخزون</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">في التوزيع</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">الحالة</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 13%;">العدد الفعلي</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">الفرق</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; text-align: ${$q.lang.rtl ? 'right' : 'left'}; width: 25%;">${t('products.product')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 12%;">${t('products.category')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 6%;">${t('products.unit')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">${t('products.stock')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">${t('inventory.inDistribution')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">${t('common.status')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 13%;">${t('inventory.actualCount')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">${t('inventory.difference')}</th>
           </tr>
         </thead>
         <tbody>
           ${tableRows}
           <tr style="background: #e3f2fd; font-weight: bold;">
-            <td colspan="4" style="text-align: left; padding: 10px; border: 1px solid #ddd;">المجموع</td>
+            <td colspan="4" style="text-align: left; padding: 10px; border: 1px solid #ddd;">${t('common.total')}</td>
             <td style="text-align: center; padding: 10px; border: 1px solid #ddd;">${formatQuantity(totalStock)}</td>
             <td style="text-align: center; padding: 10px; border: 1px solid #ddd;">${formatQuantity(totalCommitted)}</td>
             <td style="text-align: center; padding: 10px; border: 1px solid #ddd;"></td>
@@ -841,16 +847,16 @@ const printInventoryCheckSheet = async () => {
       
       <!-- Notes Section -->
       <div style="border: 2px dashed #999; padding: 15px; margin-bottom: 30px; min-height: 60px; border-radius: 8px;">
-        <div style="font-size: 12px; color: #666; margin-bottom: 10px;">ملاحظات:</div>
+        <div style="font-size: 12px; color: #666; margin-bottom: 10px;">${t('common.notes')}:</div>
       </div>
       
       <!-- Signature Section -->
       <div style="display: flex; justify-content: space-around; margin-top: 40px;">
         <div style="text-align: center; width: 200px;">
-          <div style="border-top: 1px solid #333; margin-top: 50px; padding-top: 10px;">توقيع أمين المخزن</div>
+          <div style="border-top: 1px solid #333; margin-top: 50px; padding-top: 10px;">${t('inventory.storekeeperSignature')}</div>
         </div>
         <div style="text-align: center; width: 200px;">
-          <div style="border-top: 1px solid #333; margin-top: 50px; padding-top: 10px;">توقيع المراجع</div>
+          <div style="border-top: 1px solid #333; margin-top: 50px; padding-top: 10px;">${t('inventory.auditorSignature')}</div>
         </div>
       </div>
     </div>
@@ -905,11 +911,10 @@ const printInventoryCheckSheet = async () => {
     // Save PDF
     const fileName = `inventory_check_${today}.pdf`;
     pdf.save(fileName);
-    
-    $q.notify({ type: 'positive', message: 'PDF downloaded successfully' });
+    $q.notify({ type: 'positive', message: t('messages.pdfDownloaded') });
   } catch (error) {
     console.error('Error generating PDF:', error);
-    $q.notify({ type: 'negative', message: 'Failed to generate PDF' });
+    $q.notify({ type: 'negative', message: t('messages.failedToGeneratePdf') });
   } finally {
     // Cleanup
     document.body.removeChild(container);
@@ -919,7 +924,7 @@ const printInventoryCheckSheet = async () => {
 
 const exportToExcel = () => {
   // TODO: Implement Excel export
-  $q.notify({ type: 'info', message: 'Excel export feature coming soon' });
+  $q.notify({ type: 'info', message: t('messages.excelExportComingSoon') });
 };
 
 onMounted(() => {

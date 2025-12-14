@@ -53,4 +53,9 @@ class Product extends Model
     {
         return $this->hasOne(ProductPrice::class)->where('is_current', true);
     }
+
+    public function distributorStocks()
+    {
+        return $this->hasMany(DistributorStock::class);
+    }
 }

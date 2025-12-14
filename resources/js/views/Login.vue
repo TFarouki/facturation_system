@@ -2,19 +2,19 @@
   <div class="fullscreen bg-grey-2 flex flex-center">
     <q-card class="login-card" style="width: 400px; max-width: 90vw;">
       <q-card-section class="bg-primary text-white text-center">
-        <div class="text-h5">WMS-D</div>
-        <div class="text-subtitle2">Inventory & Sales Management</div>
+        <div class="text-h5">{{ $t('system.title') }}</div>
+        <div class="text-subtitle2">{{ $t('system.subtitle') }}</div>
       </q-card-section>
       <q-card-section>
         <q-form @submit="handleLogin">
           <q-input
             v-model="email"
-            label="Email"
+            :label="$t('settings.email')"
             type="email"
             outlined
             dense
             class="q-mb-md"
-            :rules="[val => !!val || 'Email is required']"
+            :rules="[val => !!val || $t('messages.required')]"
           >
             <template v-slot:prepend>
               <q-icon name="email" />
@@ -22,12 +22,12 @@
           </q-input>
           <q-input
             v-model="password"
-            label="Password"
+            :label="$t('settings.password')"
             :type="showPassword ? 'text' : 'password'"
             outlined
             dense
             class="q-mb-md"
-            :rules="[val => !!val || 'Password is required']"
+            :rules="[val => !!val || $t('messages.required')]"
           >
             <template v-slot:prepend>
               <q-icon name="lock" />
@@ -42,7 +42,7 @@
           </q-input>
           <q-btn
             type="submit"
-            label="Login"
+            :label="$t('system.login')"
             color="primary"
             class="full-width"
             :loading="loading"
@@ -57,9 +57,11 @@
 </template>
 <script setup>
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import api from '../api';
 const router = useRouter();
+const { t } = useI18n();
 const email = ref('');
 const password = ref('');
 const showPassword = ref(false);
@@ -80,7 +82,7 @@ const handleLogin = async () => {
     
     router.push('/');
   } catch (err) {
-    error.value = err.response?.data?.message || 'Login failed. Please check your credentials.';
+    error.value = err.response?.data?.message || t('system.loginFailed');
   } finally {
     loading.value = false;
   }

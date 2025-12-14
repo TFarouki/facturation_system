@@ -7,7 +7,7 @@
       :options="filteredCategories"
       option-value="id"
       option-label="name"
-      :label="label"
+      :label="label || $t('products.category')"
       outlined
       dense
       emit-value
@@ -25,7 +25,7 @@
               flat
               color="primary"
               icon="add"
-              label="Add New Category"
+              :label="$t('common.add')"
               @click="openAddCategoryDialog"
             />
           </q-item-section>
@@ -37,25 +37,25 @@
     <q-dialog v-model="showAddDialog">
       <q-card style="min-width: 400px">
         <q-card-section class="bg-secondary text-white">
-          <div class="text-h6">Add New Category</div>
+          <div class="text-h6">{{ $t('common.add') }} {{ $t('products.category') }}</div>
         </q-card-section>
 
         <q-card-section>
           <q-form @submit="saveCategory">
             <q-input
               v-model="newCategoryName"
-              label="Category Name *"
+              :label="$t('distributors.name') + ' *'"
               outlined
               dense
               autofocus
-              :rules="[val => !!val || 'Required']"
+              :rules="[val => !!val || $t('messages.required')]"
             />
 
             <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancel" flat @click="showAddDialog = false" />
+              <q-btn :label="$t('common.cancel')" flat @click="showAddDialog = false" />
               <q-btn
                 type="submit"
-                label="Save"
+                :label="$t('common.save')"
                 color="secondary"
                 :loading="saving"
               />
@@ -70,6 +70,7 @@
 <script setup>
 import { useQuasar } from 'quasar';
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import api from '../api';
 
 const props = defineProps({
@@ -94,6 +95,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'category-added']);
 
 const $q = useQuasar();
+const { t } = useI18n();
 const selectRef = ref(null);
 const categories = ref([]);
 const filteredCategories = ref([]);
@@ -144,7 +146,7 @@ const saveCategory = async () => {
     
     $q.notify({
       type: 'positive',
-      message: 'Category added successfully'
+      message: t('messages.categoryAddedSuccessfully')
     });
     
     // Reload categories
@@ -167,7 +169,7 @@ const saveCategory = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: 'Failed to add category'
+      message: t('messages.failedToAddCategory')
     });
   } finally {
     saving.value = false;

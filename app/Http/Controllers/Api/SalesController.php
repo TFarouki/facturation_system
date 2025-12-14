@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\SalesReceipt;
 use App\Models\SalesDetail;
+use App\Models\SalesPayment;
 use App\Models\Distributor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,8 +30,10 @@ class SalesController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.promo_quantity' => 'nullable|numeric|min:0',
             'items.*.selling_price' => 'required|numeric|min:0',
             'items.*.price_type_used' => 'required|in:wholesale,semi_wholesale,retail',
+            'items.*.note' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -53,14 +56,31 @@ class SalesController extends Controller
                 'receipt_image_path' => $filePath,
             ]);
 
-            // Create receipt details
+            // Create receipt details and deduct from VAN stock
             foreach ($request->items as $item) {
+                // Check Van Stock
+                $vanStock = \App\Models\DistributorStock::where('distributor_id', $request->distributor_id)
+                    ->where('product_id', $item['product_id'])
+                    ->first();
+                
+                $totalQuantity = $item['quantity'] + ($item['promo_quantity'] ?? 0);
+                
+                if (!$vanStock || $vanStock->quantity < $totalQuantity) {
+                    $productName = \App\Models\Product::find($item['product_id'])->name ?? 'Product';
+                    throw new \Exception("Insufficient stock in Van for product {$productName} (Available: " . ($vanStock->quantity ?? 0) . ", Requested: {$totalQuantity})");
+                }
+
+                // Decrement Van Stock
+                $vanStock->decrement('quantity', $totalQuantity);
+
                 SalesDetail::create([
                     'receipt_id' => $receipt->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
+                    'promo_quantity' => $item['promo_quantity'] ?? 0,
                     'selling_price' => $item['selling_price'],
                     'price_type_used' => $item['price_type_used'],
+                    'note' => $item['note'] ?? null,
                 ]);
             }
 
@@ -77,12 +97,20 @@ class SalesController extends Controller
 
     public function index(Request $request)
     {
-        $query = SalesReceipt::with(['distributor', 'client', 'details.product']);
+        $query = SalesReceipt::with(['distributor', 'client', 'details.product', 'payments'])
+            ->withSum('payments', 'amount')
+            ->withSum(['payments as pending_amount' => function ($query) {
+                $query->where('payment_method', 'check')
+                      ->where('check_date', '>', now());
+            }], 'amount');
         
         // Filter by distributor if provided
         if ($request->has('distributor_id')) {
             $query->where('distributor_id', $request->distributor_id);
         }
+        
+        // Explicitly exclude soft deleted records just in case global scope isn't triggering
+        $query->withoutTrashed();
         
         $receipts = $query->latest('receipt_date')->get();
         return response()->json($receipts);
@@ -109,8 +137,10 @@ class SalesController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.promo_quantity' => 'nullable|numeric|min:0',
             'items.*.selling_price' => 'required|numeric|min:0',
             'items.*.price_type_used' => 'required|in:wholesale,semi_wholesale,retail',
+            'items.*.note' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -138,17 +168,43 @@ class SalesController extends Controller
                 'receipt_image_path' => $filePath,
             ]);
 
+            // 1. Restore stock from old details
+            foreach ($receipt->details as $detail) {
+                $vanStock = \App\Models\DistributorStock::firstOrCreate(
+                    ['distributor_id' => $receipt->distributor_id, 'product_id' => $detail->product_id],
+                    ['quantity' => 0]
+                );
+                $vanStock->increment('quantity', $detail->quantity + ($detail->promo_quantity ?? 0));
+            }
+
             // Delete old details
             $receipt->details()->delete();
 
-            // Create new receipt details
+            // 2. Validate and Deduct new items from VAN stock
             foreach ($request->items as $item) {
+                // Check Van Stock
+                $vanStock = \App\Models\DistributorStock::where('distributor_id', $request->distributor_id)
+                    ->where('product_id', $item['product_id'])
+                    ->first();
+                
+                $totalQuantity = $item['quantity'] + ($item['promo_quantity'] ?? 0);
+
+                if (!$vanStock || $vanStock->quantity < $totalQuantity) {
+                    $productName = \App\Models\Product::find($item['product_id'])->name ?? 'Product';
+                    throw new \Exception("Insufficient stock in Van for product {$productName} (Available: " . ($vanStock->quantity ?? 0) . ", Requested: {$totalQuantity})");
+                }
+
+                // Decrement Van Stock
+                $vanStock->decrement('quantity', $totalQuantity);
+
                 SalesDetail::create([
                     'receipt_id' => $receipt->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
+                    'promo_quantity' => $item['promo_quantity'] ?? 0,
                     'selling_price' => $item['selling_price'],
                     'price_type_used' => $item['price_type_used'],
+                    'note' => $item['note'] ?? null,
                 ]);
             }
 
@@ -162,24 +218,38 @@ class SalesController extends Controller
 
     public function destroy(SalesReceipt $receipt)
     {
-        DB::beginTransaction();
+                \Log::info("Sale {$receipt}");
         try {
-            // Delete file if exists
-            if ($receipt->receipt_image_path) {
-                Storage::disk('public')->delete($receipt->receipt_image_path);
-            }
+            DB::transaction(function () use ($receipt) {
+                // 1. Restore Stock to Validator
+                $receipt->load('details');
+                foreach ($receipt->details as $detail) {
+                    $vanStock = \App\Models\DistributorStock::firstOrCreate(
+                        ['distributor_id' => $receipt->distributor_id, 'product_id' => $detail->product_id],
+                        ['quantity' => 0]
+                    );
+                    $vanStock->increment('quantity', $detail->quantity + ($detail->promo_quantity ?? 0));
+                }
+                
 
-            // Delete details first
-            $receipt->details()->delete();
-            
-            // Delete receipt
-            $receipt->delete();
+                // 2. Soft Delete related records
+                $receipt->details()->delete();
+                \Log::info("Sales details deleted.");
 
-            DB::commit();
+                $receipt->payments()->delete();
+                \Log::info("Sale payments deleted.");
+                
+                // 3. Soft Delete the receipt
+                $receipt->delete();
+                \Log::info("Sale receipt deleted.");
+                
+                // Note: We do NOT delete the physical file here because it's a soft delete.
+                // It can be restored later.
+            });
+
             return response()->json(['message' => 'Sales receipt deleted successfully']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => 'Failed to delete sales receipt', 'message' => $e->getMessage()], 500);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Delete failed', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -246,5 +316,36 @@ class SalesController extends Controller
                 'receipt_number' => $nextReceiptNumber,
             ]);
         }
+    }
+
+    public function addPayment(Request $request, $id)
+    {
+        $receipt = SalesReceipt::findOrFail($id);
+        
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'payment_date' => 'required|date',
+            'payment_method' => 'required|string',
+            'reference' => 'nullable|string',
+            'check_date' => 'nullable|date',
+            'note' => 'nullable|string',
+        ]);
+
+        $payment = $receipt->payments()->create($validated);
+
+        return response()->json($payment, 201);
+    }
+
+    public function getPayments($id)
+    {
+        $receipt = SalesReceipt::findOrFail($id);
+        return response()->json($receipt->payments()->orderBy('payment_date', 'desc')->get());
+    }
+
+    public function deletePayment($id)
+    {
+        $payment = SalesPayment::findOrFail($id);
+        $payment->delete();
+        return response()->json(null, 204);
     }
 }

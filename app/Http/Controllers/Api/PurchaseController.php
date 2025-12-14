@@ -8,6 +8,7 @@ use App\Models\ProductSellingPrice;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseDetail;
 use App\Services\CmupCalculatorService;
+use App\Models\PurchasePayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -108,7 +109,12 @@ class PurchaseController extends Controller
 
     public function index()
     {
-        $invoices = PurchaseInvoice::with(['details.product.unit', 'supplier'])
+        $invoices = PurchaseInvoice::with(['supplier', 'details.product.unit', 'payments'])
+            ->withSum('payments', 'amount')
+            ->withSum(['payments as pending_amount' => function ($query) {
+                $query->where('payment_method', 'check')
+                      ->where('check_date', '>', now());
+            }], 'amount')
             ->withCount('details')
             ->latest()
             ->get();
@@ -315,5 +321,36 @@ class PurchaseController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to upload document: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function addPayment(Request $request, $id)
+    {
+        $invoice = PurchaseInvoice::findOrFail($id);
+        
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'payment_date' => 'required|date',
+            'payment_method' => 'required|string',
+            'reference' => 'nullable|string',
+            'check_date' => 'nullable|date',
+            'note' => 'nullable|string',
+        ]);
+
+        $payment = $invoice->payments()->create($validated);
+
+        return response()->json($payment, 201);
+    }
+
+    public function getPayments($id)
+    {
+        $invoice = PurchaseInvoice::findOrFail($id);
+        return response()->json($invoice->payments()->orderBy('payment_date', 'desc')->get());
+    }
+
+    public function deletePayment($id)
+    {
+        $payment = PurchasePayment::findOrFail($id);
+        $payment->delete();
+        return response()->json(null, 204);
     }
 }

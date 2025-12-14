@@ -1,8 +1,8 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Products</div>
-      <q-btn color="primary" icon="add" label="Add Product" @click="showDialog = true" />
+      <div class="text-h4">{{ $t('products.title') }}</div>
+      <q-btn color="primary" icon="add" :label="$t('products.newProduct')" @click="showDialog = true" />
     </div>
 
     <!-- Table Toolbar -->
@@ -12,7 +12,7 @@
         v-model="searchText"
         outlined
         dense
-        placeholder="Search products..."
+        :placeholder="$t('common.search') + '...'"
         style="min-width: 300px"
       >
         <template v-slot:prepend>
@@ -24,15 +24,15 @@
 
       <!-- Export to Excel -->
       <q-btn flat round dense icon="download" color="positive" @click="exportToExcel">
-        <q-tooltip>Export to Excel</q-tooltip>
+        <q-tooltip>{{ $t('products.exportToExcel') }}</q-tooltip>
       </q-btn>
 
       <!-- Column Visibility Settings -->
       <q-btn flat round dense icon="more_vert" color="primary">
-        <q-tooltip>Settings</q-tooltip>
+        <q-tooltip>{{ $t('common.actions') }}</q-tooltip>
         <q-menu>
           <q-list style="min-width: 200px">
-            <q-item-label header>Show/Hide Columns</q-item-label>
+            <q-item-label header>{{ $t('products.showHideColumns') }}</q-item-label>
             <q-item tag="label" v-for="col in toggleableColumns" :key="col.name">
               <q-item-section>
                 <q-checkbox v-model="visibleColumns" :val="col.name" :label="col.label" />
@@ -41,7 +41,7 @@
             <q-separator />
             <q-item tag="label">
               <q-item-section>
-                <q-checkbox v-model="showActionsColumn" label="Actions Column" />
+                <q-checkbox v-model="showActionsColumn" :label="$t('products.actionsColumn')" />
               </q-item-section>
             </q-item>
           </q-list>
@@ -59,18 +59,20 @@
       class="rounded-table"
       v-model:pagination="pagination"
       :rows-per-page-options="[10, 25, 50, 100]"
-    >
+      :rows-per-page-label="$t('common.rowsPerPage')"
+      :no-data-label="$t('common.noData')"
+      :loading-label="$t('common.loading')"
     >
       <template v-slot:body-cell-actions="props">
         <q-td :props="props">
           <q-btn flat dense icon="edit" color="secondary" @click="editProduct(props.row)">
-            <q-tooltip>Edit Product</q-tooltip>
+            <q-tooltip>{{ $t('products.editProduct') }}</q-tooltip>
           </q-btn>
           <q-btn round dense icon="attach_money" color="amber" size="sm" @click="updatePrices(props.row)">
-            <q-tooltip>إضافة التسعير</q-tooltip>
+            <q-tooltip>{{ $t('products.addPricing') }}</q-tooltip>
           </q-btn>
           <q-btn flat dense icon="delete" color="negative" @click="deleteProduct(props.row)">
-            <q-tooltip>Delete Product</q-tooltip>
+            <q-tooltip>{{ $t('common.delete') }}</q-tooltip>
           </q-btn>
         </q-td>
       </template>
@@ -80,7 +82,7 @@
     <q-dialog v-model="showDialog">
       <q-card style="min-width: 500px">
         <q-card-section class="bg-primary text-white">
-          <div class="text-h6">{{ editMode ? 'Edit Product' : 'Add Product' }}</div>
+          <div class="text-h6">{{ editMode ? $t('products.editProduct') : $t('products.newProduct') }}</div>
         </q-card-section>
 
         <q-card-section>
@@ -88,10 +90,10 @@
             <div class="row q-col-gutter-md">
               <!-- Product Code and Name -->
               <div class="col-4">
-                <q-input v-model="form.product_code" label="Product Code (رمز المنتج)" outlined dense />
+                <q-input v-model="form.product_code" :label="$t('products.code')" outlined dense />
               </div>
               <div class="col-8">
-                <q-input v-model="form.name" label="Product Name *" outlined dense :rules="[val => !!val || 'Required']" />
+                <q-input v-model="form.name" :label="$t('products.name') + ' *'" outlined dense :rules="[val => !!val || $t('messages.required')]" />
               </div>
               
               <!-- Product Family and Category -->
@@ -101,7 +103,7 @@
                   :options="filteredFamilies"
                   option-value="id"
                   :option-label="opt => opt.name_ar ? `${opt.name} (${opt.name_ar})` : opt.name"
-                  label="Product Family (عائلة المنتج)"
+                  :label="$t('products.family')"
                   outlined
                   dense
                   emit-value
@@ -118,7 +120,7 @@
                         <q-icon name="add" color="primary" />
                       </q-item-section>
                       <q-item-section class="text-primary">
-                        Add new family
+                        {{ $t('common.add') }}
                       </q-item-section>
                     </q-item>
                   </template>
@@ -128,19 +130,19 @@
                         <q-icon name="add" color="primary" />
                       </q-item-section>
                       <q-item-section class="text-primary">
-                        Add new family
+                        {{ $t('common.add') }}
                       </q-item-section>
                     </q-item>
                   </template>
                 </q-select>
               </div>
               <div class="col-6">
-                <CategorySelect v-model="form.category_id" label="Category" />
+                <CategorySelect v-model="form.category_id" :label="$t('products.category')" />
               </div>
               
               <!-- Barcode and Unit -->
               <div class="col-6">
-                <q-input v-model="form.barcode" label="Barcode" outlined dense />
+                <q-input v-model="form.barcode" :label="$t('products.barcode')" outlined dense />
               </div>
               <div class="col-6">
                 <q-select 
@@ -148,23 +150,35 @@
                   :options="units" 
                   option-value="id" 
                   :option-label="opt => `${opt.unit_name_ar} (${opt.unit_name_en || opt.unit_symbol_en})`"
-                  label="Unit *" 
+                  :label="$t('products.unit') + ' *'" 
                   outlined 
                   dense 
                   emit-value 
                   map-options 
-                  :rules="[val => !!val || 'Required']" 
+                  :rules="[val => !!val || $t('messages.required')]"
                 />
               </div>
               
-              <!-- Stock Quantity -->
-              <div class="col-12">
-                <q-input v-model.number="form.current_stock_quantity" label="Stock Quantity *" type="number" outlined dense :rules="[val => val >= 0 || 'Must be positive']" />
+              <!-- Stock Quantity and Cost -->
+              <div class="col-6">
+                <q-input v-model.number="form.current_stock_quantity" :label="$t('products.stock') + ' *'" type="number" outlined dense :rules="[val => val >= 0 || $t('messages.required')]" />
+              </div>
+              <div class="col-6">
+                <q-input 
+                  v-if="!editMode"
+                  v-model.number="form.initial_cost" 
+                  :label="$t('products.initialCost') + ' *'" 
+                  type="number" 
+                  outlined 
+                  dense 
+                  :rules="[val => val >= 0 || $t('messages.required')]" 
+                  :hint="$t('products.cmup')"
+                />
               </div>
               
               <!-- Description - Full Row -->
               <div class="col-12">
-                <q-input v-model="form.product_description" label="Description" outlined dense type="textarea" rows="2" />
+                <q-input v-model="form.product_description" :label="$t('products.description')" outlined dense type="textarea" rows="2" />
               </div>
             </div>
 
@@ -172,8 +186,8 @@
             <q-expansion-item
               v-if="!editMode"
               icon="attach_money"
-              label="Pricing (Optional)"
-              caption="Add pricing information"
+              :label="$t('products.pricing')"
+              :caption="$t('products.addPricing')"
               class="q-mt-md"
               dense
             >
@@ -183,7 +197,7 @@
                     <div class="col-3">
                       <q-input 
                         v-model.number="form.wholesale_price" 
-                        label="Wholesale" 
+                        :label="$t('products.wholesalePrice')" 
                         type="number" 
                         outlined 
                         dense 
@@ -192,13 +206,13 @@
                       />
                     </div>
                     <div class="col-3">
-                      <q-input v-model.number="form.semi_wholesale_price" label="Semi-Wholesale" type="number" outlined dense suffix="DH" />
+                      <q-input v-model.number="form.semi_wholesale_price" :label="$t('products.semiWholesalePrice')" type="number" outlined dense suffix="DH" />
                     </div>
                     <div class="col-3">
-                      <q-input v-model.number="form.retail_price" label="Retail" type="number" outlined dense suffix="DH" />
+                      <q-input v-model.number="form.retail_price" :label="$t('products.retailPrice')" type="number" outlined dense suffix="DH" />
                     </div>
                     <div class="col-3">
-                      <TaxSelect v-model="form.tax_rate" label="Tax" />
+                      <TaxSelect v-model="form.tax_rate" :label="$t('products.tax')" />
                     </div>
                   </div>
                 </q-card-section>
@@ -206,8 +220,8 @@
             </q-expansion-item>
 
             <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancel" flat @click="closeProductDialog" />
-              <q-btn type="submit" label="Save" color="primary" :loading="saving" />
+              <q-btn :label="$t('common.cancel')" flat @click="closeProductDialog" />
+              <q-btn type="submit" :label="$t('common.save')" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -218,7 +232,7 @@
     <q-dialog v-model="showPriceDialog" persistent>
       <q-card style="min-width: 500px">
         <q-card-section class="bg-primary text-white">
-          <div class="text-h6">Update Prices</div>
+          <div class="text-h6">{{ $t('products.updatePrices') }}</div>
         </q-card-section>
 
         <q-card-section>
@@ -227,7 +241,7 @@
               <div class="col-4">
                 <q-input 
                   v-model.number="priceForm.wholesale_price" 
-                  label="Wholesale Price" 
+                  :label="$t('products.wholesalePrice')" 
                   type="number" 
                   outlined 
                   dense 
@@ -239,7 +253,7 @@
               <div class="col-4">
                 <q-input 
                   v-model.number="priceForm.semi_wholesale_price" 
-                  label="Semi-Wholesale" 
+                  :label="$t('products.semiWholesalePrice')" 
                   type="number" 
                   outlined 
                   dense 
@@ -250,7 +264,7 @@
               <div class="col-4">
                 <q-input 
                   v-model.number="priceForm.retail_price" 
-                  label="Retail Price" 
+                  :label="$t('products.retailPrice')" 
                   type="number" 
                   outlined 
                   dense 
@@ -259,13 +273,13 @@
                 />
               </div>
               <div class="col-12">
-                <TaxSelect v-model="priceForm.tax_rate" label="Tax Rate" />
+                <TaxSelect v-model="priceForm.tax_rate" :label="$t('products.taxRate')" />
               </div>
             </div>
 
             <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancel" flat @click="showPriceDialog = false" />
-              <q-btn type="submit" label="Update" color="primary" :loading="saving" />
+              <q-btn :label="$t('common.cancel')" flat @click="showPriceDialog = false" />
+              <q-btn type="submit" :label="$t('products.update')" color="primary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -276,7 +290,7 @@
     <q-dialog v-model="showAddFamilyDialog" persistent @show="focusFamilyNameInput">
       <q-card style="min-width: 400px">
         <q-card-section class="bg-secondary text-white">
-          <div class="text-h6">Add New Product Family</div>
+          <div class="text-h6">{{ $t('productFamilies.newFamily') }}</div>
         </q-card-section>
 
         <q-card-section>
@@ -284,22 +298,22 @@
             <q-input
               ref="familyNameInputRef"
               v-model="newFamilyForm.name"
-              label="Name (English) *"
+              :label="$t('distributors.name') + ' *'"
               outlined
               dense
-              :rules="[val => !!val || 'Required']"
+              :rules="[val => !!val || $t('messages.required')]"
             />
 
             <q-input
               v-model="newFamilyForm.name_ar"
-              label="Name (Arabic) الاسم بالعربية"
+              :label="$t('productFamilies.nameAr')"
               outlined
               dense
             />
 
             <div class="row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat @click="showAddFamilyDialog = false" />
-              <q-btn type="submit" label="Save" color="secondary" :loading="savingFamily" />
+              <q-btn :label="$t('common.cancel')" flat @click="showAddFamilyDialog = false" />
+              <q-btn type="submit" :label="$t('common.save')" color="secondary" :loading="savingFamily" />
             </div>
           </q-form>
         </q-card-section>
@@ -311,11 +325,13 @@
 <script setup>
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import api from '../api';
 import CategorySelect from '../components/CategorySelect.vue';
 import TaxSelect from '../components/TaxSelect.vue';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const products = ref([]);
 const units = ref([]);
 const families = ref([]);
@@ -358,7 +374,11 @@ const form = ref({
   category_id: null,
   wholesale_price: 0,
   semi_wholesale_price: 0,
+  category_id: null,
+  wholesale_price: 0,
+  semi_wholesale_price: 0,
   retail_price: 0,
+  initial_cost: 0,
 });
 
 const priceForm = ref({
@@ -368,28 +388,28 @@ const priceForm = ref({
   tax_rate: 0,
 });
 
-const columns = [
-  { name: 'product_code', label: 'Code', field: 'product_code', align: 'left', sortable: true },
-  { name: 'name', label: 'Product Name', field: 'name', align: 'left', sortable: true },
-  { name: 'product_family', label: 'Family', field: row => row.product_family?.name || row.product_family || '-', align: 'left', sortable: true },
-  { name: 'category', label: 'Category', field: row => row.category?.name || '-', align: 'left', sortable: true },
-  { name: 'unit', label: 'Unit', field: row => row.unit?.unit_name_ar || '-', align: 'left', sortable: true },
-  { name: 'stock', label: 'Stock', field: row => row.current_stock_quantity || 0, align: 'right', sortable: true, format: val => Math.floor(val) },
-  { name: 'cmup', label: 'CMUP', field: row => row.cmup_cost || 0, align: 'right', sortable: true, format: val => `${val} DH` },
-  { name: 'wholesale', label: 'Wholesale', field: row => row.current_price?.wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
-  { name: 'semi_wholesale', label: 'Semi-Wholesale', field: row => row.current_price?.semi_wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
-  { name: 'retail', label: 'Retail', field: row => row.current_price?.retail_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
-  { name: 'tax', label: 'Tax', field: row => row.current_price?.tax_rate || 0, align: 'right', sortable: true, format: val => `${val}%` },
-  { name: 'actions', label: 'Actions', field: 'actions', align: 'center', sortable: false },
-];
+const columns = computed(() => [
+  { name: 'product_code', label: t('products.code'), field: 'product_code', align: 'left', sortable: true },
+  { name: 'name', label: t('products.name'), field: 'name', align: 'left', sortable: true },
+  { name: 'product_family', label: t('products.family'), field: row => row.product_family?.name || row.product_family || '-', align: 'left', sortable: true },
+  { name: 'category', label: t('products.category'), field: row => row.category?.name || '-', align: 'left', sortable: true },
+  { name: 'unit', label: t('products.unit'), field: row => row.unit?.unit_name_ar || '-', align: 'left', sortable: true },
+  { name: 'stock', label: t('products.stock'), field: row => row.current_stock_quantity || 0, align: 'right', sortable: true, format: val => Math.floor(val) },
+  { name: 'cmup', label: t('products.cmup'), field: row => row.cmup_cost || 0, align: 'right', sortable: true, format: val => `${val} DH` },
+  { name: 'wholesale', label: t('products.wholesalePrice'), field: row => row.current_price?.wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
+  { name: 'semi_wholesale', label: t('products.semiWholesalePrice'), field: row => row.current_price?.semi_wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
+  { name: 'retail', label: t('products.retailPrice'), field: row => row.current_price?.retail_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
+  { name: 'tax', label: t('products.tax'), field: row => row.current_price?.tax_rate || 0, align: 'right', sortable: true, format: val => `${val}%` },
+  { name: 'actions', label: t('common.actions'), field: 'actions', align: 'center', sortable: false },
+]);
 
 // Computed properties
 const toggleableColumns = computed(() => {
-  return columns.filter(col => col.name !== 'name' && col.name !== 'actions');
+  return columns.value.filter(col => col.name !== 'name' && col.name !== 'actions');
 });
 
 const displayedColumns = computed(() => {
-  let cols = columns.filter(col => {
+  let cols = columns.value.filter(col => {
     if (col.name === 'name') return true;
     if (col.name === 'actions') return showActionsColumn.value;
     return visibleColumns.value.includes(col.name);
@@ -431,7 +451,7 @@ const loadProducts = async () => {
     const response = await api.get('/products');
     products.value = response.data;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load products' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -515,10 +535,10 @@ const saveNewFamily = async () => {
     showAddFamilyDialog.value = false;
     newFamilyForm.value = { name: '', name_ar: '' };
     
-    $q.notify({ type: 'positive', message: 'Family created successfully' });
+    $q.notify({ type: 'positive', message: t('productFamilies.createdSuccessfully') });
   } catch (error) {
     console.error('Failed to create family:', error);
-    $q.notify({ type: 'negative', message: 'Failed to create family' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     savingFamily.value = false;
   }
@@ -592,6 +612,7 @@ const closeProductDialog = () => {
     wholesale_price: 0,
     semi_wholesale_price: 0,
     retail_price: 0,
+    initial_cost: 0,
   };
 };
 
@@ -600,7 +621,7 @@ const saveProduct = async () => {
   try {
     if (editMode.value) {
       await api.put(`/products/${selectedProduct.value.id}`, form.value);
-      $q.notify({ type: 'positive', message: 'Product saved successfully' });
+      $q.notify({ type: 'positive', message: t('messages.savedSuccessfully') });
       closeProductDialog();
       loadProducts();
     } else {
@@ -617,15 +638,17 @@ const saveProduct = async () => {
         wholesale_price: form.value.wholesale_price || 0,
         semi_wholesale_price: form.value.semi_wholesale_price || 0,
         retail_price: form.value.retail_price || 0,
+        retail_price: form.value.retail_price || 0,
         tax_rate: form.value.tax_rate || 0,
+        initial_cost: form.value.initial_cost || 0,
       };
       await api.post('/products', productData);
-      $q.notify({ type: 'positive', message: 'Product saved successfully' });
+      $q.notify({ type: 'positive', message: t('messages.savedSuccessfully') });
       closeProductDialog();
       loadProducts();
     }
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to save product' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -647,13 +670,13 @@ const savePrices = async () => {
   try {
     const productId = selectedProduct.value?.id || tempProductForPricing.value?.id;
     await api.put(`/products/${productId}/prices`, priceForm.value);
-    $q.notify({ type: 'positive', message: 'Prices updated successfully' });
+    $q.notify({ type: 'positive', message: t('messages.updatedSuccessfully') });
     showPriceDialog.value = false;
     showAddPriceDialog.value = false;
     tempProductForPricing.value = null;
     loadProducts();
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to update prices' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -661,16 +684,16 @@ const savePrices = async () => {
 
 const deleteProduct = async (product) => {
   $q.dialog({
-    title: 'Confirm',
-    message: `Delete product "${product.name}"?`,
+    title: t('common.confirm'),
+    message: t('messages.confirmDelete') + ` "${product.name}"?`,
     cancel: true,
   }).onOk(async () => {
     try {
       await api.delete(`/products/${product.id}`);
-      $q.notify({ type: 'positive', message: 'Product deleted' });
+      $q.notify({ type: 'positive', message: t('messages.deletedSuccessfully') });
       loadProducts();
     } catch (error) {
-      $q.notify({ type: 'negative', message: 'Failed to delete product' });
+      $q.notify({ type: 'negative', message: t('messages.error') });
     }
   });
 };
@@ -679,16 +702,16 @@ const exportToExcel = () => {
   try {
     // Prepare data for export
     const exportData = filteredProducts.value.map(product => ({
-      'Product Name': product.name,
-      'Category': product.category?.name || '-',
-      'Unit': product.unit?.unit_name_ar || '-',
-      'Stock': Math.floor(product.current_stock_quantity || 0),
-      'CMUP (DH)': product.cmup_cost || 0,
-      'Wholesale (DH)': product.current_price?.wholesale_price || 0,
-      'Semi-Wholesale (DH)': product.current_price?.semi_wholesale_price || 0,
-      'Retail (DH)': product.current_price?.retail_price || 0,
-      'Tax (%)': product.current_price?.tax_rate || 0,
-      'Barcode': product.barcode || '-',
+      [t('products.name')]: product.name,
+      [t('products.category')]: product.category?.name || '-',
+      [t('products.unit')]: product.unit?.unit_name_ar || '-',
+      [t('products.stock')]: Math.floor(product.current_stock_quantity || 0),
+      [t('products.cmup') + ' (DH)']: product.cmup_cost || 0,
+      [t('products.wholesalePrice') + ' (DH)']: product.current_price?.wholesale_price || 0,
+      [t('products.semiWholesalePrice') + ' (DH)']: product.current_price?.semi_wholesale_price || 0,
+      [t('products.retailPrice') + ' (DH)']: product.current_price?.retail_price || 0,
+      [t('products.tax') + ' (%)']: product.current_price?.tax_rate || 0,
+      [t('products.barcode')]: product.barcode || '-',
     }));
 
     // Convert to CSV
@@ -715,9 +738,9 @@ const exportToExcel = () => {
     link.click();
     document.body.removeChild(link);
 
-    $q.notify({ type: 'positive', message: 'Products exported successfully' });
+    $q.notify({ type: 'positive', message: t('messages.exportedSuccessfully') });
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to export products' });
+    $q.notify({ type: 'negative', message: t('messages.failedToExport') });
   }
 };
 

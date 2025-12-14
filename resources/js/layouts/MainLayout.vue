@@ -3,7 +3,8 @@
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-btn flat dense round icon="menu" @click="drawer = !drawer" />
-        <q-toolbar-title>WMS-D</q-toolbar-title>
+        <q-toolbar-title class="absolute-center">{{ $t('system.name') }}</q-toolbar-title>
+        <q-space />
         
         <div class="row items-center q-gutter-sm">
           <div class="text-subtitle1">{{ userName }}</div>
@@ -14,21 +15,21 @@
                   <q-item-section avatar>
                     <q-icon name="lock" />
                   </q-item-section>
-                  <q-item-section>Change Password</q-item-section>
+                  <q-item-section>{{ $t('nav.changePassword') }}</q-item-section>
                 </q-item>
                 
                 <q-item clickable v-close-popup :to="{ name: 'Settings' }">
                   <q-item-section avatar>
                     <q-icon name="settings" />
                   </q-item-section>
-                  <q-item-section>Settings</q-item-section>
+                  <q-item-section>{{ $t('settings.title') }}</q-item-section>
                 </q-item>
 
                 <q-item v-if="isAdmin" clickable v-close-popup :to="{ name: 'Users' }">
                   <q-item-section avatar>
                     <q-icon name="people" />
                   </q-item-section>
-                  <q-item-section>Manage Users</q-item-section>
+                  <q-item-section>{{ $t('nav.manageUsers') }}</q-item-section>
                 </q-item>
 
                 <q-separator />
@@ -37,7 +38,7 @@
                   <q-item-section avatar>
                     <q-icon name="logout" />
                   </q-item-section>
-                  <q-item-section>Logout</q-item-section>
+                  <q-item-section>{{ $t('nav.logout') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -48,104 +49,105 @@
 
     <q-drawer v-model="drawer" show-if-above bordered>
       <q-list>
-        <q-item-label header>Navigation</q-item-label>
         
         <q-item clickable :to="{ name: 'Dashboard' }" exact>
           <q-item-section avatar>
             <q-icon name="dashboard" />
           </q-item-section>
-          <q-item-section>Dashboard</q-item-section>
+          <q-item-section>{{ $t('nav.dashboard') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Products' }">
           <q-item-section avatar>
             <q-icon name="shopping_bag" />
           </q-item-section>
-          <q-item-section>Products (السلع)</q-item-section>
+          <q-item-section>{{ $t('products.title') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Categories' }">
           <q-item-section avatar>
             <q-icon name="category" />
           </q-item-section>
-          <q-item-section>Categories (الأصناف)</q-item-section>
+          <q-item-section>{{ $t('nav.categories') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'ProductFamilies' }">
           <q-item-section avatar>
             <q-icon name="family_restroom" />
           </q-item-section>
-          <q-item-section>Product Families (عائلات المنتجات)</q-item-section>
+          <q-item-section>{{ $t('nav.productFamilies') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Suppliers' }">
           <q-item-section avatar>
             <q-icon name="local_shipping" />
           </q-item-section>
-          <q-item-section>Suppliers (الموردين)</q-item-section>
+          <q-item-section>{{ $t('nav.suppliers') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Clients' }">
           <q-item-section avatar>
             <q-icon name="people" />
           </q-item-section>
-          <q-item-section>Clients (العملاء)</q-item-section>
+          <q-item-section>{{ $t('clients.title') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Distributors' }">
           <q-item-section avatar>
             <q-icon name="airport_shuttle" />
           </q-item-section>
-          <q-item-section>Distributors (الموزعين)</q-item-section>
+          <q-item-section>{{ $t('distributors.title') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Purchases' }">
           <q-item-section avatar>
             <q-icon name="shopping_cart" />
           </q-item-section>
-          <q-item-section>Purchase Invoices</q-item-section>
+          <q-item-section>{{ $t('purchases.title') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Inventory' }">
           <q-item-section avatar>
             <q-icon name="inventory_2" />
           </q-item-section>
-          <q-item-section>Inventory (المخزون)</q-item-section>
+          <q-item-section>{{ $t('nav.inventory') }}</q-item-section>
         </q-item>
 
-        <q-item clickable :to="{ name: 'DeliveryNotes' }">
-          <q-item-section avatar>
-            <q-icon name="unarchive" />
-          </q-item-section>
-          <q-item-section>Delivery Notes (إذن خروج)</q-item-section>
-        </q-item>
+
 
         <q-item clickable :to="{ name: 'DistributorStock' }">
           <q-item-section avatar>
             <q-icon name="inventory" />
           </q-item-section>
-          <q-item-section>Distributor Stock (مخزون الموزعين)</q-item-section>
+          <q-item-section>{{ $t('nav.distributorStock') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Sales' }">
           <q-item-section avatar>
             <q-icon name="point_of_sale" />
           </q-item-section>
-          <q-item-section>Sales (المبيعات)</q-item-section>
+          <q-item-section>{{ $t('sales.title') }}</q-item-section>
+        </q-item>
+
+        <q-item clickable :to="{ name: 'DeliveryNotes' }">
+          <q-item-section avatar>
+            <q-icon name="unarchive" />
+          </q-item-section>
+          <q-item-section>{{ $t('nav.deliveryNotes') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'ReturnNotes' }">
           <q-item-section avatar>
             <q-icon name="archive" />
           </q-item-section>
-          <q-item-section>Return Notes (إذن إرجاع)</q-item-section>
+          <q-item-section>{{ $t('nav.returnNotes') }}</q-item-section>
         </q-item>
 
         <q-item clickable :to="{ name: 'Reports' }">
           <q-item-section avatar>
             <q-icon name="assessment" />
           </q-item-section>
-          <q-item-section>Reports (التقارير)</q-item-section>
+          <q-item-section>{{ $t('nav.reports') }}</q-item-section>
         </q-item>
       </q-list>
     </q-drawer>
@@ -158,42 +160,42 @@
     <q-dialog v-model="showPasswordDialog">
       <q-card style="min-width: 350px">
         <q-card-section class="bg-primary text-white">
-          <div class="text-h6">Change Password</div>
+          <div class="text-h6">{{ $t('system.changePassword') }}</div>
         </q-card-section>
 
         <q-card-section>
           <q-form @submit="changePassword" class="q-gutter-md">
             <q-input
               v-model="passwordForm.current_password"
-              label="Current Password"
+              :label="$t('users.currentPassword')"
               type="password"
               outlined
               dense
-              :rules="[val => !!val || 'Required']"
+              :rules="[val => !!val || $t('messages.required')]"
             />
             <q-input
               v-model="passwordForm.new_password"
-              label="New Password"
+              :label="$t('users.newPassword')"
               type="password"
               outlined
               dense
-              :rules="[val => !!val || 'Required', val => val.length >= 8 || 'Min 8 chars']"
+              :rules="[val => !!val || $t('messages.required'), val => val.length >= 8 || $t('users.minChars')]"
             />
             <q-input
               v-model="passwordForm.new_password_confirmation"
-              label="Confirm New Password"
+              :label="$t('users.confirmPassword')"
               type="password"
               outlined
               dense
               :rules="[
-                val => !!val || 'Required',
-                val => val === passwordForm.new_password || 'Passwords do not match'
+                val => !!val || $t('messages.required'),
+                val => val === passwordForm.new_password || $t('messages.error')
               ]"
             />
             
             <div class="row justify-end q-mt-md">
-              <q-btn label="Cancel" flat v-close-popup />
-              <q-btn type="submit" label="Change" color="primary" :loading="changingPassword" />
+              <q-btn :label="$t('common.cancel')" flat v-close-popup />
+              <q-btn type="submit" :label="$t('products.update')" color="primary" :loading="changingPassword" />
             </div>
           </q-form>
         </q-card-section>
@@ -205,10 +207,12 @@
 <script setup>
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import api from '../api';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const router = useRouter();
 const drawer = ref(false);
 const showPasswordDialog = ref(false);
@@ -229,7 +233,7 @@ const changePassword = async () => {
   changingPassword.value = true;
   try {
     await api.post('/change-password', passwordForm.value);
-    $q.notify({ type: 'positive', message: 'Password changed successfully' });
+    $q.notify({ type: 'positive', message: t('system.passwordChanged') });
     showPasswordDialog.value = false;
     passwordForm.value = {
       current_password: '',
@@ -237,7 +241,7 @@ const changePassword = async () => {
       new_password_confirmation: '',
     };
   } catch (error) {
-    $q.notify({ type: 'negative', message: error.response?.data?.message || 'Failed to change password' });
+    $q.notify({ type: 'negative', message: error.response?.data?.message || t('messages.failedToSave') });
   } finally {
     changingPassword.value = false;
   }

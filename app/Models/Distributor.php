@@ -14,6 +14,30 @@ class Distributor extends Model
         'phone',
         'vehicle_plate',
         'vehicle_type',
-        'notes',
     ];
+
+    public function payments()
+    {
+        return $this->hasMany(DistributorPayment::class);
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(SalesReceipt::class);
+    }
+    
+    public function salesPayments()
+    {
+        return $this->hasManyThrough(SalesPayment::class, SalesReceipt::class, 'distributor_id', 'sales_receipt_id');
+    }
+
+    public function stock()
+    {
+        return $this->hasMany(DistributorStock::class);
+    }
+
+    public function transfers()
+    {
+        return $this->hasMany(StockTransfer::class);
+    }
 }

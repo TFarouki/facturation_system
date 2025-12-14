@@ -35,6 +35,7 @@ class SettingController extends Controller
                 'contact_phone' => 'nullable|string|max:255',
                 'semi_wholesale_percentage' => 'nullable|numeric|min:0|max:100',
                 'retail_percentage' => 'nullable|numeric|min:0|max:100',
+                'language' => 'nullable|string|in:ar,en,fr',
             ]);
 
             $setting = Setting::current();
@@ -48,7 +49,8 @@ class SettingController extends Controller
                 'contact_person',
                 'contact_phone',
                 'semi_wholesale_percentage',
-                'retail_percentage'
+                'retail_percentage',
+                'language'
             ]);
             
             // Handle company_logo separately - only update if explicitly provided and not empty

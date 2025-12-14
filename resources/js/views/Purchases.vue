@@ -1,13 +1,13 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Purchase Invoices</div>
+      <div class="text-h4">{{ $t('purchases.title') }}</div>
       <div class="row q-gutter-sm">
         <q-input
           v-model="searchText"
           outlined
           dense
-          placeholder="Search invoices..."
+          :placeholder="$t('common.search') + '...'"
           style="min-width: 250px"
         >
           <template v-slot:prepend>
@@ -15,22 +15,22 @@
           </template>
         </q-input>
         <q-btn color="secondary" icon="download" flat dense @click="exportToExcel">
-          <q-tooltip>Export to Excel</q-tooltip>
+          <q-tooltip>{{ $t('common.download') }}</q-tooltip>
         </q-btn>
         <q-btn color="grey-7" icon="more_vert" flat dense>
-          <q-tooltip>Options</q-tooltip>
+          <q-tooltip>{{ $t('common.actions') }}</q-tooltip>
           <q-menu>
             <q-list style="min-width: 200px">
               <q-item clickable v-close-popup @click="toggleFilterMismatch">
                 <q-item-section avatar>
                   <q-icon :name="filterMismatchOnly ? 'check_box' : 'check_box_outline_blank'" color="primary" />
                 </q-item-section>
-                <q-item-section>Show only mismatches</q-item-section>
+                <q-item-section>{{ $t('purchases.filterMismatch') }}</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
         </q-btn>
-        <q-btn color="primary" icon="add" label="New Purchase" @click="showDialog = true" />
+        <q-btn color="primary" icon="add" :label="$t('purchases.newPurchase')" @click="showDialog = true" />
       </div>
     </div>
 
@@ -42,6 +42,9 @@
       flat
       bordered
       class="rounded-table"
+      :rows-per-page-label="$t('common.rowsPerPage')"
+      :no-data-label="$t('common.noData')"
+      :loading-label="$t('common.loading')"
       v-model:pagination="pagination"
     >
       <template v-slot:body-cell-supplier="props">
@@ -85,17 +88,32 @@
           <span v-else class="text-grey-5">-</span>
         </q-td>
       </template>
+        <template v-slot:body-cell-payment_status="props">
+          <q-td :props="props">
+            <q-badge 
+              :color="getPaymentInfo(props.row).color" 
+              class="q-pa-xs cursor-pointer"
+            >
+              <q-icon :name="getPaymentInfo(props.row).icon" size="xs" class="q-mr-xs" />
+              {{ getPaymentInfo(props.row).label }}
+              <q-tooltip v-if="getPaymentInfo(props.row).tooltip">
+                {{ getPaymentInfo(props.row).tooltip }}
+              </q-tooltip>
+            </q-badge>
+          </q-td>
+        </template>
+
       <template v-slot:body-cell-actions="props">
         <q-td :props="props">
           <div class="row items-center q-gutter-xs">   
             <q-btn flat dense icon="visibility" color="positive" @click="viewDetails(props.row)">
-              <q-tooltip>View Details</q-tooltip>
+              <q-tooltip>{{ $t('common.view') }}</q-tooltip>
             </q-btn>
             <q-btn flat dense icon="edit" color="primary" @click="editInvoice(props.row)">
-              <q-tooltip>Edit Invoice</q-tooltip>
+              <q-tooltip>{{ $t('common.edit') }}</q-tooltip>
             </q-btn>
             <q-btn flat dense icon="delete" color="negative" @click="confirmDelete(props.row)">
-              <q-tooltip>Delete Invoice</q-tooltip>
+              <q-tooltip>{{ $t('common.delete') }}</q-tooltip>
             </q-btn>
             <q-btn 
               flat 
@@ -104,7 +122,7 @@
               color="primary" 
               @click="openAttachFileDialog(props.row)"
             >
-              <q-tooltip>Attach Invoice Document</q-tooltip>
+              <q-tooltip>{{ $t('purchases.attachDocument') }}</q-tooltip>
             </q-btn>
             <q-icon 
               v-if="props.row.it_has_def" 
@@ -112,8 +130,11 @@
               color="warning" 
               size="md"
             >
-              <q-tooltip>Total mismatch detected!</q-tooltip>
+              <q-tooltip>{{ $t('purchases.totalMismatch') }}</q-tooltip>
             </q-icon>
+            <q-btn flat dense icon="attach_money" color="positive" @click="openPaymentDialog(props.row)">
+              <q-tooltip>{{ $t('payments.title') }}</q-tooltip>
+            </q-btn>
           </div>
         </q-td>
       </template>
@@ -124,7 +145,7 @@
       <q-card style="min-width: 700px; max-width: 95vw;">
         <!-- Header with Warning -->
         <q-card-section class="bg-primary text-white">
-          <div class="text-h6">New Purchase Invoice</div>
+          <div class="text-h6">{{ $t('purchases.newPurchase') }}</div>
         </q-card-section>
 
 
@@ -133,7 +154,7 @@
             <!-- Section 1: Invoice Information -->
             <div class="section-header compact">
               <q-icon name="receipt" size="sm" class="q-mr-xs" />
-              <span class="text-subtitle2 text-weight-bold">Invoice Information</span>
+              <span class="text-subtitle2 text-weight-bold">{{ $t('purchases.invoiceInfo') }}</span>
             </div>
             <q-separator class="q-mb-xs" />
             
@@ -144,14 +165,14 @@
                   :options="supplierOptions"
                   option-value="value"
                   option-label="label"
-                  label="Supplier *"
+                  :label="$t('purchases.supplier') + ' *'"
                   outlined
                   dense
                   emit-value
                   map-options
                   use-input
                   @filter="filterSuppliers"
-                  :rules="[val => !!val || 'Required']"
+                  :rules="[val => !!val || $t('messages.required')]"
                 >
                   <template v-slot:prepend>
                     <q-icon name="business" size="xs" />
@@ -159,7 +180,7 @@
                   <template v-slot:no-option>
                     <q-item clickable @click="openSupplierDialog">
                       <q-item-section class="text-primary">
-                        <q-icon name="add" /> Add New Supplier
+                        <q-icon name="add" /> {{ $t('purchases.addNewSupplier') }}
                       </q-item-section>
                     </q-item>
                   </template>
@@ -168,10 +189,10 @@
               <div class="col-3">
                 <q-input 
                   v-model="form.invoice_number" 
-                  label="Invoice Number *" 
+                  :label="$t('purchases.invoiceNumber') + ' *'" 
                   outlined 
                   dense 
-                  :rules="[val => !!val || 'Required']"
+                  :rules="[val => !!val || $t('messages.required')]"
                 >
                   <template v-slot:prepend>
                     <q-icon name="tag" size="xs" />
@@ -181,11 +202,11 @@
               <div class="col-2-5">
                 <q-input 
                   v-model="form.invoice_date" 
-                  label="Date *" 
+                  :label="$t('common.date') + ' *'" 
                   type="date" 
                   outlined 
                   dense 
-                  :rules="[val => !!val || 'Required']"
+                  :rules="[val => !!val || $t('messages.required')]"
                 >
                   <template v-slot:prepend>
                     <q-icon name="event" size="xs" />
@@ -195,13 +216,13 @@
               <div class="col-2-5">
                 <q-input
                   v-model.number="form.manual_total"
-                  label="Total *"
+                  :label="$t('common.total') + ' *'"
                   type="number"
                   outlined
                   dense
                   step="0.01"
                   suffix="DH"
-                  :rules="[val => val > 0 || 'Required']"
+                  :rules="[val => val > 0 || $t('messages.required')]"
                 >
                   <template v-slot:prepend>
                     <q-icon name="payments" size="xs" />
@@ -213,7 +234,7 @@
             <!-- Section 2: Products List -->
             <div class="section-header">
               <q-icon name="inventory_2" size="sm" class="q-mr-sm" />
-              <span class="text-subtitle1 text-weight-bold">Products</span>
+              <span class="text-subtitle1 text-weight-bold">{{ $t('purchases.products') }}</span>
             </div>
             <q-separator class="q-mb-md" />
             
@@ -225,7 +246,7 @@
                     :options="productOptions"
                     option-value="value"
                     option-label="label"
-                    label="Product"
+                    :label="$t('purchases.product')"
                     outlined
                     dense
                     emit-value
@@ -236,7 +257,7 @@
                     <template v-slot:no-option>
                       <q-item clickable @click="openProductDialog">
                         <q-item-section class="text-primary">
-                          <q-icon name="add" /> Add New Product
+                          <q-icon name="add" /> {{ $t('purchases.addNewProduct') }}
                         </q-item-section>
                       </q-item>
                     </template>
@@ -245,7 +266,7 @@
                 <div class="col-3">
                   <q-input 
                     v-model.number="item.quantity" 
-                    label="Quantity" 
+                    :label="$t('sales.quantity')" 
                     type="number" 
                     outlined 
                     dense 
@@ -256,7 +277,7 @@
                 <div class="col-3">
                   <q-input 
                     v-model.number="item.purchase_price" 
-                    label="Price (DH)" 
+                    :label="$t('purchases.price') + ' (DH)'" 
                     type="number" 
                     outlined 
                     dense 
@@ -274,7 +295,7 @@
                     @click="removeItem(index)"
                     :disable="form.items.length === 1"
                   >
-                    <q-tooltip>Remove Item</q-tooltip>
+                    <q-tooltip>{{ $t('purchases.removeItem') }}</q-tooltip>
                   </q-btn>
                 </div>
               </div>
@@ -284,7 +305,7 @@
                   flat 
                   color="primary" 
                   icon="add" 
-                  label="Add Item" 
+                  :label="$t('purchases.addItem')" 
                   @click="addItem" 
                   size="sm"
                 />
@@ -294,14 +315,14 @@
             <!-- Section 3: Total & Notes -->
             <div class="section-header compact">
               <q-icon name="calculate" size="sm" class="q-mr-xs" />
-              <span class="text-subtitle2 text-weight-bold">Calculated Total & Notes</span>
+              <span class="text-subtitle2 text-weight-bold">{{ $t('purchases.calculatedTotalNotes') }}</span>
             </div>
             <q-separator class="q-mb-xs" />
             
             <div class="row q-col-gutter-xs">
               <div class="col-3">
                 <div class="q-pa-xs bg-grey-2 rounded-borders" style="height: 100%;">
-                  <div class="text-caption text-grey-7">Calculated Total</div>
+                  <div class="text-caption text-grey-7">{{ $t('purchases.calculatedTotal') }}</div>
                   <div class="text-h6 text-weight-bold">
                     {{ calculatedTotal.toFixed(2) }} DH
                   </div>
@@ -310,7 +331,7 @@
               <div class="col-9">
                 <q-input 
                   v-model="form.notes" 
-                  label="Notes" 
+                  :label="$t('common.notes')" 
                   outlined 
                   dense 
                   type="textarea" 
@@ -327,7 +348,7 @@
             <div class="row q-mt-md q-mb-sm">
               <q-toggle
                 v-model="allowMismatch"
-                label="Save despite total difference"
+                :label="$t('purchases.saveDespiteDifference')"
                 color="warning"
                 dense
               />
@@ -335,10 +356,10 @@
 
             <!-- Action Buttons -->
             <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancel" flat @click="closeDialog" />
+              <q-btn :label="$t('common.cancel')" flat @click="closeDialog" />
               <q-btn 
                 type="submit" 
-                label="Save" 
+                :label="$t('common.save')" 
                 color="primary" 
                 :loading="saving"
                 icon="save"
@@ -353,37 +374,37 @@
     <q-dialog v-model="showProductDialog">
       <q-card style="min-width: 500px">
         <q-card-section class="bg-secondary text-white">
-          <div class="text-h6">Quick Add Product</div>
+          <div class="text-h6">{{ $t('purchases.quickAddProduct') }}</div>
         </q-card-section>
 
         <q-card-section>
           <q-form @submit="saveQuickProduct">
-            <q-input v-model="productForm.name" label="Product Name *" outlined dense class="q-mb-md" :rules="[val => !!val || 'Required']" />
-            <q-input v-model="productForm.product_code" label="Product Code" outlined dense class="q-mb-md" />
-            <q-input v-model="productForm.barcode" label="Barcode" outlined dense class="q-mb-md" />
-            <category-select v-model="productForm.category_id" label="Category" />
-            <q-input v-model="productForm.unit_of_measure" label="Unit" outlined dense class="q-mb-md" />
-            <q-input v-model.number="productForm.current_stock_quantity" label="Initial Stock" type="number" outlined dense class="q-mb-md" />
+            <q-input v-model="productForm.name" :label="$t('purchases.productName') + ' *'" outlined dense class="q-mb-md" :rules="[val => !!val || $t('messages.required')]" />
+            <q-input v-model="productForm.product_code" :label="$t('purchases.productCode')" outlined dense class="q-mb-md" />
+            <q-input v-model="productForm.barcode" :label="$t('products.barcode')" outlined dense class="q-mb-md" />
+            <category-select v-model="productForm.category_id" :label="$t('products.category')" />
+            <q-input v-model="productForm.unit_of_measure" :label="$t('products.unit')" outlined dense class="q-mb-md" />
+            <q-input v-model.number="productForm.current_stock_quantity" :label="$t('purchases.initialStock')" type="number" outlined dense class="q-mb-md" />
             
-            <div class="text-subtitle2 q-mb-sm">Pricing</div>
+            <div class="text-subtitle2 q-mb-sm">{{ $t('purchases.pricing') }}</div>
             <div class="row q-col-gutter-sm q-mb-md">
               <div class="col-3">
-                <q-input v-model.number="productForm.wholesale_price" label="Wholesale" type="number" outlined dense step="0.01" />
+                <q-input v-model.number="productForm.wholesale_price" :label="$t('sales.wholesale')" type="number" outlined dense step="0.01" />
               </div>
               <div class="col-3">
-                <q-input v-model.number="productForm.semi_wholesale_price" label="Semi-Wholesale" type="number" outlined dense step="0.01" />
+                <q-input v-model.number="productForm.semi_wholesale_price" :label="$t('sales.semiWholesale')" type="number" outlined dense step="0.01" />
               </div>
               <div class="col-3">
-                <q-input v-model.number="productForm.retail_price" label="Retail" type="number" outlined dense step="0.01" />
+                <q-input v-model.number="productForm.retail_price" :label="$t('sales.retail')" type="number" outlined dense step="0.01" />
               </div>
               <div class="col-3">
-                <TaxSelect v-model="productForm.tax_rate" label="Tax" />
+                <TaxSelect v-model="productForm.tax_rate" :label="$t('products.taxRate')" />
               </div>
             </div>
 
             <div class="row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat @click="showProductDialog = false" />
-              <q-btn type="submit" label="Save & Select" color="secondary" :loading="saving" />
+              <q-btn :label="$t('common.cancel')" flat @click="showProductDialog = false" />
+              <q-btn type="submit" :label="$t('common.save')" color="secondary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -394,21 +415,21 @@
     <q-dialog v-model="showSupplierDialog">
       <q-card style="min-width: 500px">
         <q-card-section class="bg-secondary text-white">
-          <div class="text-h6">Quick Add Supplier</div>
+          <div class="text-h6">{{ $t('purchases.quickAddSupplier') }}</div>
         </q-card-section>
 
         <q-card-section>
           <q-form @submit="saveQuickSupplier">
-            <q-input v-model="supplierForm.name" label="Supplier Name *" outlined dense class="q-mb-md" :rules="[val => !!val || 'Required']" />
-            <q-input v-model="supplierForm.contact_person" label="Contact Person" outlined dense class="q-mb-md" />
-            <q-input v-model="supplierForm.phone" label="Phone" outlined dense class="q-mb-md" />
-            <q-input v-model="supplierForm.email" label="Email" type="email" outlined dense class="q-mb-md" />
-            <q-input v-model="supplierForm.address" label="Address" outlined dense type="textarea" rows="2" class="q-mb-md" />
-            <q-input v-model="supplierForm.tax_id" label="Tax ID" outlined dense class="q-mb-md" />
+            <q-input v-model="supplierForm.name" :label="$t('purchases.supplierName') + ' *'" outlined dense class="q-mb-md" :rules="[val => !!val || $t('messages.required')]" />
+            <q-input v-model="supplierForm.contact_person" :label="$t('purchases.contactPerson')" outlined dense class="q-mb-md" />
+            <q-input v-model="supplierForm.phone" :label="$t('suppliers.phone')" outlined dense class="q-mb-md" />
+            <q-input v-model="supplierForm.email" :label="$t('suppliers.email')" type="email" outlined dense class="q-mb-md" />
+            <q-input v-model="supplierForm.address" :label="$t('suppliers.address')" outlined dense type="textarea" rows="2" class="q-mb-md" />
+            <q-input v-model="supplierForm.tax_id" :label="$t('suppliers.taxId')" outlined dense class="q-mb-md" />
 
             <div class="row justify-end q-gutter-sm">
-              <q-btn label="Cancel" flat @click="showSupplierDialog = false" />
-              <q-btn type="submit" label="Save & Select" color="secondary" :loading="saving" />
+              <q-btn :label="$t('common.cancel')" flat @click="showSupplierDialog = false" />
+              <q-btn type="submit" :label="$t('common.save')" color="secondary" :loading="saving" />
             </div>
           </q-form>
         </q-card-section>
@@ -419,18 +440,18 @@
     <q-dialog v-model="showPriceDialog">
       <q-card style="min-width: 500px">
         <q-card-section class="bg-warning text-white">
-          <div class="text-h6">Price Updates Required</div>
+          <div class="text-h6">{{ $t('products.updatePrices') }}</div>
         </q-card-section>
 
         <q-card-section>
           <div v-for="update in priceUpdates" :key="update.product_id" class="q-mb-md">
             <div class="text-subtitle1">{{ update.product_name }}</div>
-            <div class="text-caption">New purchase cost: {{ update.new_purchase_cost }} DH</div>
+            <div class="text-caption">{{ $t('purchases.newPurchasePrice') }}: {{ update.new_purchase_cost }} DH</div>
             <div class="row q-col-gutter-sm q-mt-sm">
               <div class="col-4">
                 <q-input 
                   v-model.number="update.wholesale_price" 
-                  label="Wholesale" 
+                  :label="$t('sales.wholesale')" 
                   type="number" 
                   outlined 
                   dense 
@@ -439,17 +460,17 @@
                 />
               </div>
               <div class="col-4">
-                <q-input v-model.number="update.semi_wholesale_price" label="Semi-Wholesale" type="number" outlined dense step="0.01" />
+                <q-input v-model.number="update.semi_wholesale_price" :label="$t('sales.semiWholesale')" type="number" outlined dense step="0.01" />
               </div>
               <div class="col-4">
-                <q-input v-model.number="update.retail_price" label="Retail" type="number" outlined dense step="0.01" />
+                <q-input v-model.number="update.retail_price" :label="$t('sales.retail')" type="number" outlined dense step="0.01" />
               </div>
             </div>
           </div>
 
           <div class="row justify-end q-gutter-sm q-mt-md">
-            <q-btn label="Skip" flat @click="showPriceDialog = false" />
-            <q-btn label="Update Prices" color="warning" @click="updatePrices" :loading="saving" />
+            <q-btn :label="$t('common.skip')" flat @click="showPriceDialog = false" />
+            <q-btn :label="$t('products.updatePrices')" color="warning" @click="updatePrices" :loading="saving" />
           </div>
         </q-card-section>
       </q-card>
@@ -461,12 +482,12 @@
         <q-card-section class="invoice-header q-pa-none">
           <div class="row items-center justify-between q-pa-md">
             <q-btn flat dense icon="close" @click="showDetailsDialog = false" />
-            <div class="text-h6">Purchase Invoice</div>
+            <div class="text-h6">{{ $t('purchases.purchaseInvoice') }}</div>
             <q-btn 
               flat 
               dense 
               icon="picture_as_pdf" 
-              label="Save as PDF" 
+              :label="$t('sales.saveAsPdf')" 
               color="primary"
               @click="saveAsPDF"
               :loading="pdfLoading"
@@ -480,15 +501,15 @@
             <div class="row items-start justify-between">
               <!-- Left: Date and Invoice Number -->
               <div class="col-3">
-                <div class="invoice-label q-mb-xs">DATE</div>
+                <div class="invoice-label q-mb-xs">{{ $t('common.date').toUpperCase() }}</div>
                 <div class="invoice-value">{{ formatDate(selectedInvoice.invoice_date) }}</div>
-                <div class="invoice-label q-mt-md q-mb-xs">INVOICE NO</div>
+                <div class="invoice-label q-mt-md q-mb-xs">{{ $t('purchases.invoiceNumber').toUpperCase() }}</div>
                 <div class="invoice-value">{{ selectedInvoice.invoice_number }}</div>
               </div>
 
               <!-- Center: Company Name -->
               <div class="col-5 text-center">
-                <div class="text-h4 text-weight-bold q-mb-md">INVOICE</div>
+                <div class="text-h4 text-weight-bold q-mb-md">{{ $t('purchases.purchaseInvoice').toUpperCase() }}</div>
                 <div class="company-name text-weight-bold">{{ companySettings.company_name || 'YOUR COMPANY' }}</div>
               </div>
 
@@ -499,7 +520,7 @@
                 </div>
                 <div v-else class="logo-placeholder q-mb-md">
                   <q-icon name="business" size="80px" color="grey-4" />
-                  <div class="text-caption text-grey-6">Logo Name</div>
+                  <div class="text-caption text-grey-6">{{ $t('purchases.logoName') }}</div>
                 </div>
               </div>
             </div>
@@ -510,22 +531,22 @@
             <div class="row q-col-gutter-md">
               <!-- Company Info -->
               <div class="col-6">
-                <div class="invoice-label q-mb-xs">YOUR COMPANY</div>
+                <div class="invoice-label q-mb-xs">{{ $t('settings.companyInfo').toUpperCase() }}</div>
                 <div class="invoice-info">
                   <div v-if="companySettings.address">{{ companySettings.address }}</div>
-                  <div v-if="companySettings.phone">Phone: {{ companySettings.phone }}</div>
-                  <div v-if="companySettings.email">Email: {{ companySettings.email }}</div>
+                  <div v-if="companySettings.phone">{{ $t('settings.phone') }}: {{ companySettings.phone }}</div>
+                  <div v-if="companySettings.email">{{ $t('settings.email') }}: {{ companySettings.email }}</div>
                 </div>
               </div>
 
               <!-- Supplier Info -->
               <div class="col-6 text-right">
-                <div class="invoice-label q-mb-xs">INVOICE TO</div>
+                <div class="invoice-label q-mb-xs">{{ $t('purchases.supplier').toUpperCase() }}</div>
                 <div class="invoice-info">
                   <div class="text-weight-bold">{{ selectedInvoice.supplier?.name || selectedInvoice.supplier_name || 'N/A' }}</div>
                   <div v-if="selectedInvoice.supplier?.address">{{ selectedInvoice.supplier.address }}</div>
-                  <div v-if="selectedInvoice.supplier?.phone">Phone: {{ selectedInvoice.supplier.phone }}</div>
-                  <div v-if="selectedInvoice.supplier?.email">Email: {{ selectedInvoice.supplier.email }}</div>
+                  <div v-if="selectedInvoice.supplier?.phone">{{ $t('settings.phone') }}: {{ selectedInvoice.supplier.phone }}</div>
+                  <div v-if="selectedInvoice.supplier?.email">{{ $t('settings.email') }}: {{ selectedInvoice.supplier.email }}</div>
                 </div>
               </div>
             </div>
@@ -535,11 +556,11 @@
           <div class="transaction-bar">
             <div class="row">
               <div class="col-3">
-                <div class="transaction-label">PAYMENT TERMS</div>
-                <div class="transaction-value">Due on Receipt</div>
+                <div class="transaction-label">{{ $t('purchases.declaredTotal').toUpperCase() }}</div>
+                <div class="transaction-value">{{ selectedInvoice.total_in_invoice || '0.00' }}</div>
               </div>
               <div class="col-3">
-                <div class="transaction-label">DUE DATE</div>
+                <div class="transaction-label">{{ $t('purchases.invoiceDate').toUpperCase() }}</div>
                 <div class="transaction-value">{{ formatDate(selectedInvoice.invoice_date) }}</div>
               </div>
             </div>
@@ -551,10 +572,10 @@
               <thead>
                 <tr>
                   <th style="width: 5%">#</th>
-                  <th style="width: 45%">DESCRIPTION</th>
-                  <th style="width: 10%">QUANTITY</th>
-                  <th style="width: 20%" class="text-right">UNIT PRICE</th>
-                  <th style="width: 20%" class="text-right">LINE TOTAL</th>
+                  <th style="width: 45%">{{ $t('products.description').toUpperCase() }}</th>
+                  <th style="width: 10%">{{ $t('sales.quantity').toUpperCase() }}</th>
+                  <th style="width: 20%" class="text-right">{{ $t('sales.unitPrice').toUpperCase() }}</th>
+                  <th style="width: 20%" class="text-right">{{ $t('sales.lineTotal').toUpperCase() }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -574,7 +595,7 @@
             </table>
           </div>
           <div v-else class="text-center q-pa-md text-grey-6">
-            No items in this invoice
+            {{ $t('purchases.noItemsInInvoice') }}
           </div>
 
           <!-- Totals Section -->
@@ -582,11 +603,11 @@
             <div class="row justify-end">
               <div class="totals-box">
                 <div class="total-row">
-                  <span class="total-label">Subtotal</span>
+                  <span class="total-label">{{ $t('sales.subtotal') }}</span>
                   <span class="total-value">{{ (calculateSubtotal() || 0).toFixed(2) }} DH</span>
                 </div>
                 <div class="total-row">
-                  <span class="total-label">Total</span>
+                  <span class="total-label">{{ $t('common.total') }}</span>
                   <span class="total-value final">{{ getTotalAmount().toFixed(2) }} DH</span>
                 </div>
               </div>
@@ -595,15 +616,15 @@
 
           <!-- Notes Section -->
           <div class="invoice-notes-section" v-if="selectedInvoice.notes">
-            <div class="invoice-label q-mb-xs">NOTES</div>
+            <div class="invoice-label q-mb-xs">{{ $t('common.notes').toUpperCase() }}</div>
             <div class="invoice-notes">{{ selectedInvoice.notes }}</div>
           </div>
         </q-card-section>
 
         <q-card-actions align="right" class="invoice-actions">
-          <q-btn label="Close" flat @click="showDetailsDialog = false" />
+          <q-btn :label="$t('common.close')" flat @click="showDetailsDialog = false" />
           <q-btn 
-            label="Save as PDF" 
+            :label="$t('sales.saveAsPdf')" 
             icon="picture_as_pdf" 
             color="primary"
             @click="saveAsPDF"
@@ -617,7 +638,7 @@
     <q-dialog v-model="showAttachDialog">
       <q-card style="min-width: 400px">
         <q-card-section>
-          <div class="text-h6">Attach Invoice Document</div>
+          <div class="text-h6">{{ $t('purchases.attachInvoiceDocTitle') }}</div>
           <div class="text-caption text-grey-7">
             Invoice #{{ selectedInvoiceForAttach?.invoice_number }}
           </div>
@@ -627,7 +648,7 @@
           <q-file
             v-model="attachedFile"
             outlined
-            label="Select PDF or Image"
+            :label="$t('purchases.selectFile')"
             accept="image/*,application/pdf"
             max-file-size="5242880"
             @rejected="onFileRejected"
@@ -637,19 +658,121 @@
             </template>
           </q-file>
           <div class="text-caption text-grey-7 q-mt-sm">
-            Maximum file size: 5MB
+            {{ $t('purchases.maxFileSize') }}
           </div>
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn label="Cancel" flat @click="closeAttachDialog" />
+          <q-btn :label="$t('common.cancel')" flat @click="closeAttachDialog" />
           <q-btn 
-            label="Upload" 
+            :label="$t('purchases.upload')" 
             color="primary" 
             :disable="!attachedFile"
             :loading="saving"
             @click="uploadInvoiceFile" 
           />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+    <!-- Payment History Dialog -->
+    <q-dialog v-model="showPaymentDialog">
+      <q-card style="min-width: 600px">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">{{ $t('purchases.paymentHistory') }}</div>
+          <div class="text-subtitle2" v-if="selectedInvoiceForPayment">
+            Invoice #{{ selectedInvoiceForPayment.invoice_number }} - {{ selectedInvoiceForPayment.supplier?.name }}
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pa-md">
+          <div class="row q-col-gutter-md q-mb-lg">
+             <div class="col-4">
+                <div class="text-caption text-grey">{{ $t('payments.totalInvoice') }}</div>
+                <div class="text-h6">{{ (parseFloat(selectedInvoiceForPayment?.total_in_invoice || selectedInvoiceForPayment?.total_amount || 0)).toFixed(2) }} DH</div>
+             </div>
+             <div class="col-4">
+                <div class="text-caption text-grey">{{ $t('payments.totalPaid') }}</div>
+                <div class="text-h6 text-positive">{{ totalPaid.toFixed(2) }} DH</div>
+             </div>
+             <div class="col-4">
+                <div class="text-caption text-grey">{{ $t('payments.remaining') }}</div>
+                <div class="text-h6 text-negative">{{ remainingBalance.toFixed(2) }} DH</div>
+             </div>
+          </div>
+
+          <!-- Add Payment Form -->
+          <q-card bordered flat class="q-mb-md">
+            <q-card-section>
+              <div class="text-subtitle2 q-mb-sm">{{ $t('payments.addNewPayment') }}</div>
+              <q-form @submit.prevent="savePayment">
+                <div class="row q-col-gutter-sm">
+                  <div class="col-4">
+                    <q-input v-model.number="paymentForm.amount" :label="$t('payments.amount') + ' *'" type="number" outlined dense step="0.01">
+                       <template v-slot:append>
+                           <q-btn flat dense color="primary" :label="$t('payments.payAll')" size="sm" @click="paymentForm.amount = remainingBalance" />
+                       </template>
+                    </q-input>
+                  </div>
+                  <div class="col-4">
+                    <q-input v-model="paymentForm.payment_date" :label="$t('common.date') + ' *'" type="date" outlined dense />
+                  </div>
+                  <div class="col-4">
+                    <q-select 
+                        v-model="paymentForm.payment_method" 
+                        :options="paymentMethods" 
+                        emit-value 
+                        map-options 
+                        :label="$t('payments.paymentMethod') + ' *'" 
+                        outlined 
+                        dense 
+                        option-value="value"
+                        option-label="label"
+                    />
+                  </div>
+                  <div class="col-4">
+                    <q-input 
+                        v-model="paymentForm.reference" 
+                        :label="paymentForm.payment_method === 'check' ? $t('payments.checkNo') : (paymentForm.payment_method === 'bank_transfer' ? $t('payments.refNo') : $t('payments.receiptNo'))" 
+                        outlined 
+                        dense 
+                    />
+                  </div>
+                  <div class="col-4" v-if="paymentForm.payment_method === 'check'">
+                    <q-input v-model="paymentForm.check_date" :label="$t('payments.checkDate')" type="date" outlined dense />
+                  </div>
+                  <div class="col-4">
+                    <q-input v-model="paymentForm.note" :label="$t('common.notes')" outlined dense />
+                  </div>
+                  <div class="col-12 text-right">
+                    <q-btn :label="$t('payments.addPayment')" type="submit" color="primary" :loading="saving" size="sm" />
+                  </div>
+                </div>
+              </q-form>
+            </q-card-section>
+          </q-card>
+
+          <!-- Payments List -->
+           <q-list separator bordered>
+             <q-item v-for="payment in paymentsValues" :key="payment.id">
+               <q-item-section>
+                 <q-item-label>{{ getMethodLabel(payment.payment_method) }} - {{ parseFloat(payment.amount).toFixed(2) }} DH</q-item-label>
+                 <q-item-label caption>
+                    {{ new Date(payment.payment_date).toLocaleDateString() }}
+                    <span v-if="payment.reference"> | Ref: {{ payment.reference }}</span>
+                 </q-item-label>
+               </q-item-section>
+               <q-item-section side>
+                 <q-btn icon="delete" flat round color="negative" size="sm" @click="deletePayment(payment.id)" />
+               </q-item-section>
+             </q-item>
+             <q-item v-if="paymentsValues.length === 0">
+                <q-item-section class="text-center text-grey">{{ $t('payments.noPaymentsRecorded') }}</q-item-section>
+             </q-item>
+           </q-list>
+
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat :label="$t('common.close')" color="primary" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -661,6 +784,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import api from '../api';
 import CategorySelect from '../components/CategorySelect.vue';
 import TaxSelect from '../components/TaxSelect.vue';
@@ -668,6 +792,7 @@ import { formatDateForInput } from '../utils/invoiceUtils';
 
 
 const $q = useQuasar();
+const { t } = useI18n();
 const invoices = ref([]);
 const products = ref([]);
 const suppliers = ref([]);
@@ -687,6 +812,22 @@ const allProducts = ref([]);
 const allSuppliers = ref([]);
 const priceUpdates = ref([]);
 const selectedInvoiceForAttach = ref(null);
+const selectedInvoiceForPayment = ref(null);
+const showPaymentDialog = ref(false);
+const paymentsValues = ref([]);
+const paymentForm = ref({
+    amount: 0,
+    payment_date: new Date().toISOString().split('T')[0],
+    payment_method: 'cash',
+    reference: '',
+    check_date: '',
+    note: ''
+});
+const paymentMethods = [
+    { label: t('payments.cash'), value: 'cash' },
+    { label: t('payments.check'), value: 'check' },
+    { label: t('payments.bankTransfer'), value: 'bank_transfer' },
+];
 const attachedFile = ref(null);
 const settings = ref({
   semi_wholesale_percentage: 0,
@@ -743,24 +884,25 @@ const pagination = ref({
 const showDetailsDialog = ref(false);
 const selectedInvoice = ref(null);
 
-const columns = [
-  { name: 'invoice_number', label: 'Invoice #', field: 'invoice_number', align: 'left', sortable: true },
-  { name: 'supplier', label: 'Supplier', align: 'left', sortable: true },
-  { name: 'date', label: 'Date', field: 'invoice_date', align: 'left', sortable: true },
-  { name: 'total_calculated', label: 'Total Calculated', align: 'right', sortable: true },
-  { name: 'total', label: 'Total in Invoice', align: 'right', sortable: true },
-  { name: 'items_count', label: 'Items', align: 'center', sortable: true },
-  { name: 'image', label: 'Image', align: 'center' },
-  { name: 'actions', label: 'Actions', align: 'center' },
-];
+const columns = computed(() => [
+  { name: 'invoice_number', label: t('purchases.invoiceNumber'), field: 'invoice_number', align: 'left', sortable: true },
+  { name: 'supplier', label: t('purchases.supplier'), align: 'left', sortable: true },
+  { name: 'date', label: t('common.date'), field: 'invoice_date', align: 'left', sortable: true },
+  { name: 'total_calculated', label: t('purchases.calculatedTotal'), align: 'right', sortable: true },
+  { name: 'total', label: t('purchases.declaredTotal'), align: 'right', sortable: true },
+  { name: 'payment_status', label: t('common.status'), align: 'center', sortable: true },
+  { name: 'items_count', label: t('sales.itemsCount'), align: 'center', sortable: true },
+  { name: 'image', label: t('sales.image'), align: 'center' },
+  { name: 'actions', label: t('common.actions'), align: 'center' },
+]);
 
-const detailsColumns = [
-  { name: 'product', label: 'Product', align: 'left' },
-  { name: 'unit', label: 'Unit', align: 'left' },
-  { name: 'quantity', label: 'Quantity', field: 'quantity', align: 'center' },
-  { name: 'purchase_price', label: 'Price', field: 'purchase_price', align: 'right', format: val => `${val.toFixed(2)} DH` },
-  { name: 'subtotal', label: 'Subtotal', align: 'right' },
-];
+const detailsColumns = computed(() => [
+  { name: 'product', label: t('products.name'), align: 'left' },
+  { name: 'unit', label: t('products.unit'), align: 'left' },
+  { name: 'quantity', label: t('sales.quantity'), field: 'quantity', align: 'center' },
+  { name: 'purchase_price', label: t('purchases.purchasePrice'), field: 'purchase_price', align: 'right', format: val => `${val.toFixed(2)} DH` },
+  { name: 'subtotal', label: t('common.total'), align: 'right' },
+]);
 
 const calculatedTotal = computed(() => {
   return form.value.items.reduce((sum, item) => {
@@ -813,7 +955,7 @@ const loadInvoices = async () => {
     const response = await api.get('/purchases');
     invoices.value = response.data;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load invoices' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -932,10 +1074,10 @@ const saveQuickProduct = async () => {
       form.value.items[lastItemIndex].product_id = newProduct.id;
     }
     
-    $q.notify({ type: 'positive', message: 'Product created and selected' });
+    $q.notify({ type: 'positive', message: t('messages.createdSuccessfully') });
     showProductDialog.value = false;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to create product' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -953,10 +1095,10 @@ const saveQuickSupplier = async () => {
     // Auto-select the new supplier
     form.value.supplier_id = newSupplier.id;
     
-    $q.notify({ type: 'positive', message: 'Supplier created and selected' });
+    $q.notify({ type: 'positive', message: t('messages.createdSuccessfully') });
     showSupplierDialog.value = false;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to create supplier' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -1003,13 +1145,13 @@ const savePurchase = async () => {
       response = await api.post(`/purchases/${form.value.id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      $q.notify({ type: 'positive', message: 'Purchase invoice updated' });
+      $q.notify({ type: 'positive', message: t('messages.updatedSuccessfully') });
     } else {
       // Create new invoice
       response = await api.post('/purchases', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      $q.notify({ type: 'positive', message: 'Purchase invoice created' });
+      $q.notify({ type: 'positive', message: t('messages.createdSuccessfully') });
     }
     
     if (response.data.price_updates_required?.length > 0) {
@@ -1020,7 +1162,7 @@ const savePurchase = async () => {
     closeDialog();
     loadInvoices();
   } catch (error) {
-    $q.notify({ type: 'negative', message: error.response?.data?.message || 'Failed to save purchase' });
+    $q.notify({ type: 'negative', message: error.response?.data?.message || t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -1036,7 +1178,7 @@ const handleSaveAttempt = () => {
     // Show warning notification prompting user to enable mismatch toggle
     $q.notify({
       type: 'warning',
-      message: 'Total mismatch detected. Enable "Save despite difference" toggle to proceed.',
+      message: t('purchases.totalMismatchWarning'),
     });
   }
 };
@@ -1044,16 +1186,16 @@ const handleSaveAttempt = () => {
 const confirmSaveWithDifference = () => {
   $q.dialog({
     title: 'Confirm Save',
-    message: `There is a difference of ${Math.abs(totalDifference.value).toFixed(2)} DH between the manual total and calculated total. Are you sure you want to save this invoice?`,
+    message: t('purchases.confirmSaveWithDifference', { difference: Math.abs(totalDifference.value).toFixed(2) }),
     cancel: true,
     persistent: true,
     ok: {
-      label: 'Yes, Save Anyway',
+      label: t('common.yes'),
       color: 'warning',
       icon: 'warning'
     },
     cancel: {
-      label: 'Cancel',
+      label: t('common.cancel'),
       flat: true
     }
   }).onOk(() => {
@@ -1071,10 +1213,10 @@ const updatePrices = async () => {
         retail_price: update.retail_price,
       });
     }
-    $q.notify({ type: 'positive', message: 'Prices updated successfully' });
+    $q.notify({ type: 'positive', message: t('messages.updatedSuccessfully') });
     showPriceDialog.value = false;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to update prices' });
+    $q.notify({ type: 'negative', message: t('messages.failedToSave') });
   } finally {
     saving.value = false;
   }
@@ -1120,7 +1262,7 @@ const viewDetails = async (invoice) => {
     
     showDetailsDialog.value = true;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load invoice details' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -1177,14 +1319,14 @@ const saveAsPDF = async () => {
   try {
     const invoiceContent = document.getElementById('invoice-content');
     if (!invoiceContent) {
-      $q.notify({ type: 'negative', message: 'Invoice content not found' });
+      $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
       return;
     }
 
     // Show loading notification
     $q.notify({
       type: 'info',
-      message: 'Generating PDF...',
+      message: t('messages.generatingPdf'),
       timeout: 2000
     });
 
@@ -1590,14 +1732,14 @@ const saveAsPDF = async () => {
     
     $q.notify({ 
       type: 'positive', 
-      message: 'Invoice PDF downloaded successfully',
+      message: t('messages.pdfGenerated'),
       timeout: 3000
     });
   } catch (error) {
     console.error('Error generating PDF:', error);
     $q.notify({ 
       type: 'negative', 
-      message: 'Failed to generate PDF. Please try again.',
+      message: t('messages.failedToGeneratePdf'),
       timeout: 3000
     });
   } finally {
@@ -1631,7 +1773,7 @@ const editInvoice = async (invoice) => {
     // Open dialog
     showDialog.value = true;
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load invoice for editing' });
+    $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
   } finally {
     loading.value = false;
   }
@@ -1652,7 +1794,7 @@ const closeAttachDialog = () => {
 const onFileRejected = () => {
   $q.notify({
     type: 'negative',
-    message: 'File rejected. Please ensure it is an image or PDF and under 5MB.'
+    message: t('purchases.fileRejected')
   });
 };
 
@@ -1668,13 +1810,13 @@ const uploadInvoiceFile = async () => {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     
-    $q.notify({ type: 'positive', message: 'Invoice document uploaded successfully' });
+    $q.notify({ type: 'positive', message: t('purchases.docUploaded') });
     closeAttachDialog();
     loadInvoices();
   } catch (error) {
     $q.notify({ 
       type: 'negative', 
-      message: error.response?.data?.message || 'Failed to upload document' 
+      message: error.response?.data?.message || t('purchases.uploadFailed') 
     });
   } finally {
     saving.value = false;
@@ -1683,17 +1825,17 @@ const uploadInvoiceFile = async () => {
 
 const confirmDelete = (invoice) => {
   $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete invoice #${invoice.invoice_number}? This action cannot be undone.`,
+    title: t('purchases.confirmDeleteInvoiceTitle'),
+    message: t('purchases.confirmDeleteInvoiceMessage', { number: invoice.invoice_number }),
     cancel: true,
     persistent: true,
     ok: {
-      label: 'Delete',
+      label: t('common.delete'),
       color: 'negative',
       icon: 'delete'
     },
     cancel: {
-      label: 'Cancel',
+      label: t('common.cancel'),
       flat: true
     }
   }).onOk(() => {
@@ -1705,10 +1847,10 @@ const deleteInvoice = async (id) => {
   loading.value = true;
   try {
     await api.delete(`/purchases/${id}`);
-    $q.notify({ type: 'positive', message: 'Invoice deleted successfully' });
+    $q.notify({ type: 'positive', message: t('purchases.invoiceDeletedSuccessfully') });
     loadInvoices();
   } catch (error) {
-    $q.notify({ type: 'negative', message: error.response?.data?.message || 'Failed to delete invoice' });
+    $q.notify({ type: 'negative', message: error.response?.data?.message || t('purchases.invoiceDeleteFailed') });
   } finally {
     loading.value = false;
   }
@@ -1755,16 +1897,16 @@ const getFileColor = (filePath) => {
 };
 
 const getFileTooltip = (filePath) => {
-  if (!filePath) return 'View Document';
+  if (!filePath) return t('purchases.viewDocument');
   const extension = filePath.split('.').pop().toLowerCase();
-  return extension === 'pdf' ? 'View Invoice PDF' : 'View Invoice Image';
+  return extension === 'pdf' ? t('purchases.viewInvoicePdf') : t('purchases.viewInvoiceImage');
 };
 
 const exportToExcel = () => {
   const data = filteredInvoices.value;
   
   if (data.length === 0) {
-    $q.notify({ type: 'warning', message: 'No data to export' });
+    $q.notify({ type: 'warning', message: t('common.noData') });
     return;
   }
 
@@ -1808,6 +1950,134 @@ onMounted(() => {
   loadSuppliers();
   loadSettings();
 });
+const openPaymentDialog = (invoice) => {
+  selectedInvoiceForPayment.value = invoice;
+  paymentForm.value = {
+    amount: 0, 
+    payment_date: new Date().toISOString().split('T')[0],
+    payment_method: 'cash',
+    reference: '',
+    check_date: '',
+    note: ''
+  };
+  showPaymentDialog.value = true;
+  fetchPayments(invoice.id);
+};
+
+const fetchPayments = async (invoiceId) => {
+  try {
+    const response = await api.get(`/purchases/${invoiceId}/payments`);
+    paymentsValues.value = response.data;
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    $q.notify({
+      color: 'negative',
+      message: t('messages.failedToLoadData')
+    });
+  }
+};
+
+const savePayment = async () => {
+  if (paymentForm.value.amount <= 0) {
+    $q.notify({ color: 'negative', message: t('messages.amountMustBePositive') });
+    return;
+  }
+  
+  saving.value = true;
+  try {
+    const payload = { ...paymentForm.value };
+    if (!payload.check_date) payload.check_date = null;
+    
+    await api.post(`/purchases/${selectedInvoiceForPayment.value.id}/payments`, payload);
+    $q.notify({ color: 'positive', message: t('payments.paymentAdded') });
+    fetchPayments(selectedInvoiceForPayment.value.id);
+    loadInvoices(); // Refresh main list to update status if needed
+    
+    // Reset form partially
+    paymentForm.value.amount = 0;
+    paymentForm.value.reference = '';
+    paymentForm.value.note = '';
+  } catch (error) {
+    console.error('Error adding payment:', error);
+    $q.notify({ color: 'negative', message: t('messages.error') });
+  } finally {
+    saving.value = false;
+  }
+};
+
+const deletePayment = async (paymentId) => {
+  $q.dialog({
+    title: t('purchases.confirmDeleteTitle'),
+    message: t('payments.confirmDeletePayment'),
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await api.delete(`/purchase-payments/${paymentId}`);
+      $q.notify({ color: 'positive', message: t('payments.paymentDeleted') });
+      fetchPayments(selectedInvoiceForPayment.value.id);
+      loadInvoices();
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      $q.notify({ color: 'negative', message: t('messages.error') });
+    }
+  });
+};
+
+const totalPaid = computed(() => {
+  return paymentsValues.value.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+});
+
+const remainingBalance = computed(() => {
+  if (!selectedInvoiceForPayment.value) return 0;
+  const total = parseFloat(selectedInvoiceForPayment.value.total_in_invoice || selectedInvoiceForPayment.value.total_amount || 0);
+  return Math.max(0, total - totalPaid.value);
+});
+
+const getMethodLabel = (value) => {
+  const method = paymentMethods.find(m => m.value === value);
+  return method ? method.label : value;
+};
+
+const getPaymentInfo = (invoice) => {
+  const total = parseFloat(invoice.total_in_invoice || invoice.total_amount || 0);
+  const totalPaid = parseFloat(invoice.payments_sum_amount || 0);
+  const pending = parseFloat(invoice.pending_amount || 0);
+  const realPaid = totalPaid - pending;
+
+  // Find pending checks to show in tooltip
+  let tooltip = '';
+  if (pending > 0 && invoice.payments) {
+    const today = new Date();
+    const pendingChecks = invoice.payments.filter(p => 
+      p.payment_method === 'check' && 
+      p.check_date && 
+      new Date(p.check_date) > today
+    );
+    
+    if (pendingChecks.length > 0) {
+      const dates = pendingChecks.map(p => new Date(p.check_date).toLocaleDateString(t('common.locale_code') || 'fr-FR')).join(', ');
+      tooltip = t('payments.checkDue') + `: ${dates}`;
+    }
+  }
+
+  // Tolerance for float comparison
+  const tolerance = 0.01;
+
+  if (total <= 0) return { label: t('payments.paid'), color: 'positive', icon: 'check_circle', tooltip };
+
+  if (realPaid >= total - tolerance) {
+    return { label: t('payments.paid'), color: 'positive', icon: 'check_circle', tooltip };
+  } else if (totalPaid >= total - tolerance) {
+     return { label: t('payments.paidCheck'), color: 'info', icon: 'watch_later', tooltip };
+  } else if (totalPaid > 0) {
+    const remaining = total - totalPaid;
+    const partialTooltip = tooltip ? `${tooltip} | ${t('payments.remaining')}: ${remaining.toFixed(2)} DH` : `${t('payments.remaining')}: ${remaining.toFixed(2)} DH`;
+    return { label: t('payments.partial'), color: 'warning', icon: 'timelapse', tooltip: partialTooltip };
+  } else {
+    return { label: t('payments.unpaid'), color: 'negative', icon: 'cancel', tooltip };
+  }
+};
 </script>
 
 <style scoped>

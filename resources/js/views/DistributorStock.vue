@@ -1,17 +1,17 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Distributor Stock Review (مراجعة مخزون الموزعين)</div>
+      <div class="text-h4">{{ $t('nav.distributorStock') }}</div>
       <div class="row q-gutter-sm">
         <q-btn 
           v-if="selectedDistributor && filteredProducts.length > 0"
           color="orange" 
           icon="picture_as_pdf" 
-          label="Stock Check PDF" 
+          :label="$t('distributorStock.stockCheckPdf')" 
           :loading="generatingPdf"
           @click="printStockCheckSheet" 
         />
-        <q-btn color="secondary" icon="download" label="Export" @click="exportToExcel" />
+        <q-btn color="secondary" icon="download" :label="$t('distributorStock.export')" @click="exportToExcel" />
       </div>
     </div>
 
@@ -24,7 +24,7 @@
         option-value="id"
         outlined
         dense
-        label="Select Distributor (اختر الموزع)"
+        :label="$t('distributorStock.selectDistributor')"
         style="min-width: 300px"
         clearable
         emit-value
@@ -39,7 +39,7 @@
         v-model="searchText"
         outlined
         dense
-        placeholder="Search products..."
+        :placeholder="$t('distributorStock.searchProducts')"
         style="min-width: 250px"
       >
         <template v-slot:prepend>
@@ -53,7 +53,7 @@
       <q-space />
 
       <div class="text-subtitle1 text-grey-7">
-        Total Products: <span class="text-weight-bold text-primary">{{ filteredProducts.length }}</span>
+        {{ $t('distributorStock.totalProducts') }}: <span class="text-weight-bold text-primary">{{ filteredProducts.length }}</span>
       </div>
     </div>
 
@@ -62,7 +62,7 @@
       <div class="col-12 col-md-3">
         <q-card class="bg-primary text-white">
           <q-card-section>
-            <div class="text-subtitle2">Total Products (عدد المنتجات)</div>
+            <div class="text-subtitle2">{{ $t('distributorStock.totalProducts') }}</div>
             <div class="text-h4">{{ summaryStats.totalProducts }}</div>
           </q-card-section>
         </q-card>
@@ -70,7 +70,7 @@
       <div class="col-12 col-md-3">
         <q-card class="bg-positive text-white">
           <q-card-section>
-            <div class="text-subtitle2">Committed Qty (الكمية المعهودة)</div>
+            <div class="text-subtitle2">{{ $t('distributorStock.committedQty') }}</div>
             <div class="text-h4">{{ formatQuantity(summaryStats.totalQuantity) }}</div>
           </q-card-section>
         </q-card>
@@ -78,7 +78,7 @@
       <div class="col-12 col-md-3">
         <q-card :class="summaryStats.totalDifference !== 0 ? 'bg-negative' : 'bg-info'" class="text-white">
           <q-card-section>
-            <div class="text-subtitle2">Actual Qty (الكمية الفعلية)</div>
+            <div class="text-subtitle2">{{ $t('distributorStock.actualQty') }}</div>
             <div class="text-h4">{{ formatQuantity(summaryStats.totalActual) }}</div>
           </q-card-section>
         </q-card>
@@ -86,7 +86,7 @@
       <div class="col-12 col-md-3">
         <q-card :class="summaryStats.totalDifference !== 0 ? 'bg-negative' : 'bg-grey-6'" class="text-white">
           <q-card-section>
-            <div class="text-subtitle2">Difference (الفرق)</div>
+            <div class="text-subtitle2">{{ $t('distributorStock.difference') }}</div>
             <div class="text-h4">{{ formatQuantity(summaryStats.totalDifference) }}</div>
           </q-card-section>
         </q-card>
@@ -108,7 +108,7 @@
             </div>
           </div>
           <div v-if="hasChanges" class="text-negative text-weight-bold">
-            <q-icon name="warning" /> There are unsaved changes
+            <q-icon name="warning" /> {{ $t('distributorStock.unsavedChanges') }}
           </div>
         </div>
       </q-card-section>
@@ -178,7 +178,7 @@
       <template v-slot:no-data>
         <div class="full-width row flex-center q-pa-lg text-grey-6">
           <q-icon name="inventory_2" size="xl" class="q-mr-md" />
-          <span>No products found for this distributor</span>
+          <span>{{ $t('distributorStock.noProductsFoundForDistributor') }}</span>
         </div>
       </template>
       <template v-slot:bottom-row v-if="filteredProducts.length > 0">
@@ -197,7 +197,7 @@
     <div v-if="selectedDistributor && filteredProducts.length > 0" class="row justify-end q-mt-md q-gutter-sm">
       <q-btn 
         v-if="!hasChanges"
-        label="Confirm Match (تأكيد التطابق)" 
+        :label="$t('distributorStock.confirmMatch')" 
         color="positive" 
         icon="check_circle"
         :loading="saving"
@@ -205,7 +205,7 @@
       />
       <q-btn 
         v-else
-        label="Save Review (حفظ المراجعة)" 
+        :label="$t('distributorStock.saveReview')" 
         color="primary" 
         icon="save"
         :loading="saving"
@@ -218,13 +218,13 @@
       <template v-slot:avatar>
         <q-icon name="warning" />
       </template>
-      <div class="text-weight-bold">Pending Stock Differences (فروقات معلقة)</div>
-      <div>There are stock differences that need to be confirmed through sales registration.</div>
+      <div class="text-weight-bold">{{ $t('distributorStock.pendingStockDiff') }}</div>
+      <div>{{ $t('distributorStock.pendingDiffMessage') }}</div>
     </q-banner>
 
     <!-- All Distributors Overview -->
     <div v-if="!selectedDistributor" class="q-mt-lg">
-      <div class="text-h5 q-mb-md">All Distributors Overview (نظرة عامة على جميع الموزعين)</div>
+      <div class="text-h5 q-mb-md">{{ $t('distributorStock.allDistributorsOverview') }}</div>
       <div class="row q-col-gutter-md">
         <div v-for="dist in distributorsWithStock" :key="dist.id" class="col-12 col-md-4">
           <q-card class="cursor-pointer" @click="selectedDistributor = dist.id">
@@ -262,13 +262,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useQuasar } from 'quasar';
-import api from '../api';
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { useQuasar } from 'quasar';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import api from '../api';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const loading = ref(false);
 const saving = ref(false);
 const generatingPdf = ref(false);
@@ -279,13 +281,13 @@ const searchText = ref('');
 const stockReview = ref({}); // { productId: actualQuantity }
 const pendingReviews = ref({}); // Stored pending reviews from backend
 
-const columns = [
-  { name: 'product', label: 'Product (المنتج)', field: 'name', align: 'left', sortable: true },
-  { name: 'first_delivery_date', label: 'Start Date (تاريخ البدء)', field: 'first_delivery_date', align: 'center', sortable: true },
-  { name: 'committed_quantity', label: 'Committed (المعهودة)', field: 'committed_quantity', align: 'center', sortable: true },
-  { name: 'actual_quantity', label: 'Actual (الفعلية)', field: 'actual_quantity', align: 'center' },
-  { name: 'difference', label: 'Difference (الفرق)', field: 'difference', align: 'center' },
-];
+const columns = computed(() => [
+  { name: 'product', label: t('products.name'), field: 'name', align: 'left', sortable: true },
+  { name: 'first_delivery_date', label: t('common.date'), field: 'first_delivery_date', align: 'center', sortable: true },
+  { name: 'committed_quantity', label: t('distributorStock.committed'), field: 'committed_quantity', align: 'center', sortable: true },
+  { name: 'actual_quantity', label: t('distributorStock.actual'), field: 'actual_quantity', align: 'center' },
+  { name: 'difference', label: t('distributorStock.difference'), field: 'difference', align: 'center' },
+]);
 
 const selectedDistributorInfo = computed(() => {
   if (!selectedDistributor.value) return null;
@@ -386,8 +388,8 @@ const initializeStockReview = () => {
 
 const resetStockReview = () => {
   $q.dialog({
-    title: 'Reset Values',
-    message: 'Are you sure you want to reset all values to committed quantities?',
+    title: t('distributorStock.resetValues'),
+    message: t('distributorStock.resetMessage'),
     cancel: true,
     persistent: true,
   }).onOk(() => {
@@ -397,7 +399,7 @@ const resetStockReview = () => {
       review[p.id] = parseFloat(p.committed_quantity) || 0;
     });
     stockReview.value = review;
-    $q.notify({ type: 'info', message: 'Values reset to committed quantities' });
+    $q.notify({ type: 'info', message: t('distributorStock.valuesReset') });
   });
 };
 
@@ -434,8 +436,8 @@ const saveStockReview = async () => {
     $q.notify({ 
       type: 'positive', 
       message: differences.length > 0 
-        ? `Review saved with ${differences.length} difference(s)` 
-        : 'Review saved - no differences found'
+        ? t('distributorStock.reviewSavedWithDiff', { count: differences.length }) 
+        : t('distributorStock.reviewSaved')
     });
     
     // Reload to get updated pending reviews
@@ -451,8 +453,8 @@ const saveStockReview = async () => {
 
 const confirmNoChanges = async () => {
   $q.dialog({
-    title: 'Confirm Stock Match (تأكيد تطابق المخزون)',
-    message: 'Are you sure all quantities match? This will record that the stock has been verified with no differences.',
+    title: t('distributorStock.confirmMatch'),
+    message: t('distributorStock.confirmMatchMessage'),
     cancel: true,
     persistent: true,
   }).onOk(async () => {
@@ -470,7 +472,7 @@ const confirmNoChanges = async () => {
       
       $q.notify({ 
         type: 'positive', 
-        message: 'Stock verification confirmed - all quantities match!'
+        message: t('distributorStock.stockVerifiedMatch')
       });
       
       // Reload to get updated pending reviews
@@ -542,7 +544,7 @@ const loadCommittedProducts = async () => {
 
 const exportToExcel = () => {
   if (!filteredProducts.value.length) {
-    $q.notify({ type: 'warning', message: 'No data to export' });
+    $q.notify({ type: 'warning', message: t('messages.noDataToExport') });
     return;
   }
   
@@ -573,12 +575,12 @@ const exportToExcel = () => {
   link.download = `stock_review_${distributorName}_${new Date().toISOString().split('T')[0]}.csv`;
   link.click();
   
-  $q.notify({ type: 'positive', message: 'Export completed' });
+  $q.notify({ type: 'positive', message: t('messages.exportCompleted') });
 };
 
 const printStockCheckSheet = async () => {
   if (!filteredProducts.value.length || !selectedDistributorInfo.value) {
-    $q.notify({ type: 'warning', message: 'No data to generate PDF' });
+    $q.notify({ type: 'warning', message: t('messages.noDataToGeneratePdf') });
     return;
   }
   
@@ -612,8 +614,7 @@ const printStockCheckSheet = async () => {
     <div id="pdf-content" style="width: 794px; padding: 20px; font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; background: white; direction: rtl;">
       <!-- Header -->
       <div style="background: #1976d2; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;">
-        <div style="font-size: 22px; font-weight: bold; margin-bottom: 5px;">ورقة جرد مخزون الموزع</div>
-        <div style="font-size: 14px;">Stock Check Sheet</div>
+        <div style="font-size: 22px; font-weight: bold; margin-bottom: 5px;">${t('distributorStock.stockCheckSheet')}</div>
       </div>
       
       <!-- Info Section -->
@@ -635,7 +636,7 @@ const printStockCheckSheet = async () => {
           <div style="font-size: 14px; font-weight: bold;">${today}</div>
         </div>
         <div style="text-align: right; min-width: 80px; margin: 5px;">
-          <div style="font-size: 11px; color: #666;">عدد المنتجات</div>
+          <div style="font-size: 11px; color: #666;">${t('distributorStock.totalProducts')}</div>
           <div style="font-size: 14px; font-weight: bold;">${products.length}</div>
         </div>
       </div>
@@ -645,18 +646,18 @@ const printStockCheckSheet = async () => {
         <thead>
           <tr style="background: #1976d2; color: white;">
             <th style="padding: 10px; border: 1px solid #1565c0; width: 5%;">#</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; text-align: right; width: 35%;">المنتج</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 15%;">الصنف</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 8%;">الوحدة</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 12%;">الكمية المعهودة</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 15%;">العدد الفعلي</th>
-            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">الفرق</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; text-align: right; width: 35%;">${t('products.product')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 15%;">${t('products.category')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 8%;">${t('products.unit')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 12%;">${t('distributorStock.committedQty')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 15%;">${t('distributorStock.actualQty')}</th>
+            <th style="padding: 10px; border: 1px solid #1565c0; width: 10%;">${t('distributorStock.difference')}</th>
           </tr>
         </thead>
         <tbody>
           ${tableRows}
           <tr style="background: #e3f2fd; font-weight: bold;">
-            <td colspan="4" style="text-align: left; padding: 10px; border: 1px solid #ddd;">المجموع</td>
+            <td colspan="4" style="text-align: left; padding: 10px; border: 1px solid #ddd;">${t('common.total')}</td>
             <td style="text-align: center; padding: 10px; border: 1px solid #ddd;">${formatQuantity(totalCommitted)}</td>
             <td style="text-align: center; padding: 10px; border: 1px solid #ddd;"></td>
             <td style="text-align: center; padding: 10px; border: 1px solid #ddd;"></td>
@@ -731,10 +732,10 @@ const printStockCheckSheet = async () => {
     const fileName = `stock_check_${distributor.name.replace(/\s+/g, '_')}_${today}.pdf`;
     pdf.save(fileName);
     
-    $q.notify({ type: 'positive', message: 'PDF downloaded successfully' });
+    $q.notify({ type: 'positive', message: t('messages.pdfDownloaded') });
   } catch (error) {
     console.error('Error generating PDF:', error);
-    $q.notify({ type: 'negative', message: 'Failed to generate PDF' });
+    $q.notify({ type: 'negative', message: t('messages.failedToGeneratePdf') });
   } finally {
     // Cleanup
     document.body.removeChild(container);

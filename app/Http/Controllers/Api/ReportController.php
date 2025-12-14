@@ -27,9 +27,8 @@ class ReportController extends Controller
         // Calculate cost of goods sold
         $salesWithCost = SalesDetail::join('sales_receipts', 'sales_details.receipt_id', '=', 'sales_receipts.id')
             ->join('products', 'sales_details.product_id', '=', 'products.id')
-            ->join('product_selling_prices', 'products.id', '=', 'product_selling_prices.product_id')
             ->whereBetween('sales_receipts.receipt_date', [$request->start_date, $request->end_date])
-            ->selectRaw('SUM(sales_details.quantity * product_selling_prices.last_purchase_cost) as total')
+            ->selectRaw('SUM(sales_details.quantity * products.cmup_cost) as total')
             ->value('total') ?? 0;
 
         $grossProfit = $totalRevenue - $salesWithCost;
@@ -37,14 +36,13 @@ class ReportController extends Controller
         // Get breakdown by product
         $productBreakdown = SalesDetail::join('sales_receipts', 'sales_details.receipt_id', '=', 'sales_receipts.id')
             ->join('products', 'sales_details.product_id', '=', 'products.id')
-            ->join('product_selling_prices', 'products.id', '=', 'product_selling_prices.product_id')
             ->whereBetween('sales_receipts.receipt_date', [$request->start_date, $request->end_date])
             ->select(
                 'products.name',
                 DB::raw('SUM(sales_details.quantity) as total_quantity'),
                 DB::raw('SUM(sales_details.quantity * sales_details.selling_price) as revenue'),
-                DB::raw('SUM(sales_details.quantity * product_selling_prices.last_purchase_cost) as cost'),
-                DB::raw('SUM(sales_details.quantity * (sales_details.selling_price - product_selling_prices.last_purchase_cost)) as profit')
+                DB::raw('SUM(sales_details.quantity * products.cmup_cost) as cost'),
+                DB::raw('SUM(sales_details.quantity * (sales_details.selling_price - products.cmup_cost)) as profit')
             )
             ->groupBy('products.id', 'products.name')
             ->get();
