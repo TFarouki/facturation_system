@@ -132,6 +132,8 @@ export default {
     update: 'تحديث',
     productDetails: 'تفاصيل المنتج',
     currentPrices: 'الأسعار الحالية',
+    product: 'المنتج',
+    price: 'السعر',
   },
   
   // Sales

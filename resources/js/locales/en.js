@@ -133,6 +133,8 @@ export default {
     update: 'Update',
     productDetails: 'Product Details',
     currentPrices: 'Current Prices',
+    product: 'Product',
+    price: 'Price',
   },
   
   // Sales

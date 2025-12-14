@@ -153,6 +153,8 @@ export default {
     update: 'Mettre à jour',
     productDetails: 'Détails du produit',
     currentPrices: 'Prix actuels',
+    product: 'Produit',
+    price: 'Prix',
   },
   
   // Sales
