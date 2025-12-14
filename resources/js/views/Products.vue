@@ -668,12 +668,12 @@ const updatePrices = (product) => {
 const savePrices = async () => {
   saving.value = true;
   try {
-    const productId = selectedProduct.value?.id || tempProductForPricing.value?.id;
+    const productId = selectedProduct.value?.id;
+    if (!productId) return;
+
     await api.put(`/products/${productId}/prices`, priceForm.value);
     $q.notify({ type: 'positive', message: t('messages.updatedSuccessfully') });
     showPriceDialog.value = false;
-    showAddPriceDialog.value = false;
-    tempProductForPricing.value = null;
     loadProducts();
   } catch (error) {
     $q.notify({ type: 'negative', message: t('messages.failedToSave') });
