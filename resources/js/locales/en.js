@@ -520,5 +520,6 @@ export default {
     failedToLoadOrderDetails: 'Failed to load order details',
     deliveryNoteContentNotFound: 'Delivery note content not found',
     exportedSuccessfully: 'Exported successfully',
+    cannotDeleteClientWithSales: 'Cannot delete client with existing sales receipts',
   },
 };

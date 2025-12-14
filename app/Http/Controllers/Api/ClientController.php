@@ -74,6 +74,10 @@ class ClientController extends Controller
      */
     public function destroy(Client $client)
     {
+        if ($client->salesReceipts()->exists()) {
+            return response()->json(['message' => 'Cannot delete client with existing sales receipts'], 409);
+        }
+
         $client->delete();
 
         return response()->json(['message' => 'Client deleted successfully']);

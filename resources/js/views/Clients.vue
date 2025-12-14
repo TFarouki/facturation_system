@@ -243,8 +243,12 @@ const deleteClient = async () => {
     clientToDelete.value = null;
     loadClients();
   } catch (error) {
-    const errorMessage = error.response?.data?.message || t('messages.failedToDelete');
-    $q.notify({ type: 'negative', message: errorMessage });
+    if (error.response?.status === 409) {
+      $q.notify({ type: 'warning', message: t('messages.cannotDeleteClientWithSales') });
+    } else {
+      const errorMessage = error.response?.data?.message || t('messages.failedToDelete');
+      $q.notify({ type: 'negative', message: errorMessage });
+    }
   } finally {
     deleting.value = false;
   }

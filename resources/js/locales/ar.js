@@ -505,5 +505,6 @@ export default {
     failedToLoadOrderDetails: 'فشل تحميل تفاصيل الأمر',
     deliveryNoteContentNotFound: 'لم يتم العثور على محتوى إذن الخروج',
     exportedSuccessfully: 'تم التصدير بنجاح',
+    cannotDeleteClientWithSales: 'لا يمكن حذف العميل لوجود سندات بيع مرتبطة به',
   },
 };

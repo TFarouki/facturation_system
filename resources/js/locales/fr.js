@@ -530,5 +530,6 @@ export default {
     failedToLoadOrderDetails: 'Échec du chargement des détails de la commande',
     deliveryNoteContentNotFound: 'Contenu du bon de livraison introuvable',
     exportedSuccessfully: 'Exporté avec succès',
+    cannotDeleteClientWithSales: 'Impossible de supprimer le client car il a des bons de vente associés',
   },
 };
