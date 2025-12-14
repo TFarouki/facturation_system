@@ -528,6 +528,7 @@ export default {
     taxDeleted: 'Taxe supprimée',
     failedToDeleteTax: 'Échec de la suppression de la taxe',
     failedToLoadOrderDetails: 'Échec du chargement des détails de la commande',
-    deliveryNoteContentNotFound: 'Contenu du bon de sortie introuvable',
+    deliveryNoteContentNotFound: 'Contenu du bon de livraison introuvable',
+    exportedSuccessfully: 'Exporté avec succès',
   },
 };

@@ -519,5 +519,6 @@ export default {
     failedToDeleteTax: 'Failed to delete tax',
     failedToLoadOrderDetails: 'Failed to load order details',
     deliveryNoteContentNotFound: 'Delivery note content not found',
+    exportedSuccessfully: 'Exported successfully',
   },
 };

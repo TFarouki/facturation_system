@@ -504,5 +504,6 @@ export default {
     failedToDeleteTax: 'فشل حذف الضريبة',
     failedToLoadOrderDetails: 'فشل تحميل تفاصيل الأمر',
     deliveryNoteContentNotFound: 'لم يتم العثور على محتوى إذن الخروج',
+    exportedSuccessfully: 'تم التصدير بنجاح',
   },
 };
