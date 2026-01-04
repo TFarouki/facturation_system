@@ -44,12 +44,31 @@ class ProductController extends Controller
         
         // Calculate sold quantities for all products in one query
         $soldQuantities = SalesDetail::whereIn('product_id', $productIds)
-            ->select('product_id', DB::raw('SUM(quantity) as total'))
+            ->select('product_id', DB::raw('SUM(quantity + IFNULL(promo_quantity, 0)) as total'))
             ->groupBy('product_id')
             ->pluck('total', 'product_id')
             ->toArray();
         
-        // Calculate committed quantity for each product
+        // Calculate committed quantity and latest purchase price for each product
+        
+        // Fetch latest purchase prices efficiently
+        $latestPurchasePrices = DB::table('purchase_details')
+            ->join('purchase_invoices', 'purchase_details.invoice_id', '=', 'purchase_invoices.id')
+            ->whereIn('purchase_details.product_id', $productIds)
+            ->whereNull('purchase_invoices.deleted_at')
+            ->whereNull('purchase_details.deleted_at')
+            ->select('purchase_details.product_id', 'purchase_details.purchase_price')
+            ->orderBy('purchase_invoices.invoice_date', 'desc')
+            ->orderBy('purchase_details.created_at', 'desc')
+            ->get();
+            
+        $purchasePriceMap = [];
+        foreach ($latestPurchasePrices as $record) {
+            if (!isset($purchasePriceMap[$record->product_id])) {
+                $purchasePriceMap[$record->product_id] = $record->purchase_price;
+            }
+        }
+
         foreach ($products as $product) {
             $deliveryQty = floatval($deliveryQuantities[$product->id] ?? 0);
             $returnQty = floatval($returnQuantities[$product->id] ?? 0);
@@ -57,6 +76,9 @@ class ProductController extends Controller
             
             // Committed quantity = delivered - returned - sold
             $product->committed_quantity = max(0, $deliveryQty - $returnQty - $soldQty);
+            
+            // Attach latest purchase price
+            $product->latest_purchase_price = $purchasePriceMap[$product->id] ?? null;
         }
         
         return response()->json($products);
@@ -77,6 +99,8 @@ class ProductController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'product_code' => 'nullable|string|max:255',
             'product_family_id' => 'nullable|exists:product_families,id',
+            'min_stock_level' => 'nullable|numeric|min:0',
+            'cmup' => 'nullable|numeric|min:0|max:2',
         ]);
 
         DB::beginTransaction();
@@ -90,7 +114,9 @@ class ProductController extends Controller
                 'category_id' => $request->category_id,
                 'product_code' => $request->product_code,
                 'product_family_id' => $request->product_family_id,
-                'cmup_cost' => $request->initial_cost ?? 0,
+                'cmup' => $request->cmup ?? 0.7,
+                'cmup_cost' => $request->wholesale_price * ($request->cmup ?? 0.7),
+                'min_stock_level' => $request->min_stock_level ?? 10,
             ]);
 
             ProductPrice::create([
@@ -127,6 +153,8 @@ class ProductController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'product_code' => 'nullable|string|max:255',
             'product_family_id' => 'nullable|exists:product_families,id',
+            'min_stock_level' => 'nullable|numeric|min:0',
+            'cmup' => 'nullable|numeric|min:0|max:2',
         ]);
 
         $product->update($request->only([
@@ -138,8 +166,18 @@ class ProductController extends Controller
             'barcode',
             'category_id',
             'product_code',
-            'product_family_id'
+            'product_family_id',
+            'min_stock_level',
+            'cmup'
         ]));
+
+        // Recalculate cmup_cost if cmup changed
+        if ($request->has('cmup')) {
+            $wholesale = $product->currentPrice->wholesale_price ?? 0;
+            $cmup = $request->cmup ?? ($product->cmup ?? 0.7);
+            $product->cmup_cost = $wholesale * $cmup;
+            $product->save();
+        }
         
         return response()->json($product->load('currentPrice', 'category', 'unit'));
     }
@@ -178,6 +216,10 @@ class ProductController extends Controller
                 'is_current' => true,
             ]);
 
+            // Update product's cmup_cost based on the new wholesale price
+            $product->cmup_cost = $request->wholesale_price * ($product->cmup ?? 0.7);
+            $product->save();
+
             DB::commit();
             return response()->json($product->load('currentPrice', 'category', 'unit'));
         } catch (\Exception $e) {
@@ -196,6 +238,8 @@ class ProductController extends Controller
                 ->join('purchase_invoices', 'purchase_details.invoice_id', '=', 'purchase_invoices.id')
                 ->where('purchase_details.product_id', $product->id)
                 ->where('purchase_invoices.invoice_date', '>=', $twelveMonthsAgo)
+                ->whereNull('purchase_invoices.deleted_at')
+                ->whereNull('purchase_details.deleted_at')
                 ->select(
                     DB::raw('DATE_FORMAT(purchase_invoices.invoice_date, "%Y-%m") as month'),
                     DB::raw('SUM(purchase_details.quantity) as total_quantity')
@@ -209,9 +253,11 @@ class ProductController extends Controller
                 ->join('sales_receipts', 'sales_details.receipt_id', '=', 'sales_receipts.id')
                 ->where('sales_details.product_id', $product->id)
                 ->where('sales_receipts.receipt_date', '>=', $twelveMonthsAgo)
+                ->whereNull('sales_receipts.deleted_at')
+                ->whereNull('sales_details.deleted_at')
                 ->select(
                     DB::raw('DATE_FORMAT(sales_receipts.receipt_date, "%Y-%m") as month'),
-                    DB::raw('SUM(sales_details.quantity) as total_quantity')
+                    DB::raw('SUM(sales_details.quantity + IFNULL(sales_details.promo_quantity, 0)) as total_quantity')
                 )
                 ->groupBy('month')
                 ->orderBy('month')
@@ -298,6 +344,8 @@ class ProductController extends Controller
                 ->join('purchase_invoices', 'purchase_details.invoice_id', '=', 'purchase_invoices.id')
                 ->where('purchase_details.product_id', $product->id)
                 ->where('purchase_invoices.invoice_date', '>=', $twelveMonthsAgo)
+                ->whereNull('purchase_invoices.deleted_at')
+                ->whereNull('purchase_details.deleted_at')
                 ->select(
                     DB::raw('DATE_FORMAT(purchase_invoices.invoice_date, "%Y-%m") as month'),
                     DB::raw('AVG(purchase_details.purchase_price) as avg_price'),
@@ -329,6 +377,8 @@ class ProductController extends Controller
                 ->join('purchase_invoices', 'purchase_details.invoice_id', '=', 'purchase_invoices.id')
                 ->where('purchase_details.product_id', $product->id)
                 ->where('purchase_invoices.invoice_date', '>=', $twelveMonthsAgo)
+                ->whereNull('purchase_invoices.deleted_at')
+                ->whereNull('purchase_details.deleted_at')
                 ->orderBy('purchase_invoices.invoice_date', 'desc')
                 ->orderBy('purchase_details.created_at', 'desc')
                 ->value('purchase_details.purchase_price');

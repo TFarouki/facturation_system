@@ -275,7 +275,14 @@ const deleteFamily = async (family) => {
   $q.dialog({
     title: t('productFamilies.confirmDeleteTitle'),
     message: t('productFamilies.confirmDeleteMessage', { name: family.name }),
-    cancel: true,
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
+    ok: {
+      label: t('common.ok'),
+      color: 'negative'
+    },
     persistent: true,
   }).onOk(async () => {
     try {

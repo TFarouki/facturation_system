@@ -14,8 +14,6 @@ export default {
     sales: 'Sales',
     deliveryNotes: 'Delivery Notes',
     returnNotes: 'Return Notes',
-    returnNote: 'Return Note',
-    viewReturnNote: 'View Return Note',
     stockTransfers: 'Stock Transfers',
     settings: 'Settings',
     changePassword: 'Change Password',
@@ -32,10 +30,39 @@ export default {
     recentActivity: 'Recent Activity',
     newPurchaseInvoice: 'New purchase invoice created',
     cycleClosed: 'Cycle #{0} closed',
-    newSaleRecorded: 'New sale recorded',
+    newSaleRecorded: 'New Sale Recorded',
     hoursAgo: '{0} hours ago',
     dayAgo: '1 day ago',
+    lowStockProducts: 'Low Stock Products',
     daysAgo: '{0} days ago',
+    pendingReviews: 'Pending Stock Reviews',
+  },
+
+  distributorStock: {
+    unsavedChanges: 'Unsaved Changes',
+    pendingStockDiff: 'Pending Stock Differences',
+    pendingDiffMessage: 'There are pending reviews with unresolved differences for this distributor.',
+    stockCheckPdf: 'Export PDF',
+    export: 'Export',
+    selectDistributor: 'Select Distributor',
+    searchProducts: 'Search Products',
+    totalProducts: 'Total Products',
+    stockValue: 'Stock Value',
+    committedQty: 'Committed Qty',
+    actualQty: 'Actual Qty',
+    difference: 'Difference',
+    noProductsFoundForDistributor: 'No products assigned to this distributor',
+    confirmMatch: 'Confirm Match',
+    saveReview: 'Save Review',
+    allDistributorsOverview: 'Distributors Overview',
+    resetValues: 'Reset Values',
+    resetMessage: 'Are you sure you want to reset all values?',
+    valuesReset: 'Values reset',
+    reviewSavedWithDiff: 'Review saved with {count} differences',
+    reviewSaved: 'Review saved successfully',
+    confirmMatchMessage: 'Are you sure all quantities match?',
+    stockVerifiedMatch: 'Stock match confirmed',
+    stockCheckSheet: 'Distributor Stock Check Sheet',
   },
   
   // Common
@@ -51,6 +78,7 @@ export default {
     loading: 'Loading...',
     noData: 'No data available',
     confirm: 'Confirm',
+    ok: 'OK',
     yes: 'Yes',
     no: 'No',
     all: 'All',
@@ -67,6 +95,7 @@ export default {
     recordsPerTable: 'records',
     of: 'of',
     select: 'Select',
+    distributor: 'Distributor',
   },
 
   // Inventory
@@ -76,6 +105,8 @@ export default {
     lowStock: 'Low Stock',
     outOfStock: 'Out of Stock',
     inDistribution: 'In Distribution',
+    notInDistribution: 'Not in Distribution',
+    distributionStatus: 'Distribution Status',
     stockTrend: 'Stock Trend (12M)',
     priceTrend: 'Price Trend (12M)',
     totalProducts: 'Total Products',
@@ -94,12 +125,19 @@ export default {
     purchasePrice: 'Purchase Price',
     salePriceWholesale: 'Sale Price (Wholesale)',
     wholesale: 'Wholesale',
+    priceList: 'Price List',
+    productsInDistribution: 'Products in Distribution',
+    totalInDistribution: 'Total in Distribution',
+    quantity: 'Quantity',
+    distributorSignature: 'Distributor Signature',
     inventoryCheckSheet: 'Inventory Check Sheet',
     na: 'N/A',
     actualCount: 'Actual Count',
     difference: 'Difference',
     storekeeperSignature: 'Storekeeper Signature',
     auditorSignature: 'Auditor Signature',
+    totalInventoryValue: 'Total Inventory Value',
+    cmup: 'CMUP',
   },
   
   // Products
@@ -115,6 +153,7 @@ export default {
     category: 'Category',
     description: 'Description',
     stock: 'Stock',
+    minStockLevel: 'Min Stock Level',
     currentStock: 'Current Stock',
     initialCost: 'Initial Cost',
     wholesalePrice: 'Wholesale Price',
@@ -135,6 +174,7 @@ export default {
     currentPrices: 'Current Prices',
     product: 'Product',
     price: 'Price',
+    unknownProduct: 'Unknown Product',
   },
   
   // Sales
@@ -272,6 +312,17 @@ export default {
     newPurchasePrice: 'New Purchase Price',
     noItemsInInvoice: 'No items in this invoice',
     logoName: 'Logo Name',
+    filterMismatch: 'Filter Mismatch Only',
+    totalMismatchWarning: 'Please review the total! There is a mismatch between declared and calculated totals.',
+    confirmSaveWithDifference: 'There is a difference of {difference} DH. Do you want to save anyway?',
+  },
+
+  // Suppliers
+  suppliers: {
+    phone: 'Phone',
+    email: 'Email',
+    address: 'Address',
+    taxId: 'Tax ID',
   },
   
   // Distributors
@@ -301,6 +352,13 @@ export default {
     stockValue: 'Stock Value (Products in Vehicle)',
     unpaidSalesTotal: 'Total Unpaid Sales',
     cannotDelete: 'Cannot delete distributor with products in stock or unpaid sales (financial liability)',
+    salesReport: 'Sales Report',
+    salesReportTitle: 'Distributor Sales Report: {name}',
+    from: 'From',
+    to: 'To',
+    allSales: 'All Sales',
+    totalPeriod: 'Total Period',
+    realizedProfit: 'Realized Profit',
   },
 
   // Distributor Stock Review
@@ -315,16 +373,16 @@ export default {
     searchProducts: 'Search products...',
     totalProducts: 'Total Products',
     allDistributorsOverview: 'All Distributors Overview',
-    stockCheckPdf: 'Stock Check PDF',
-    export: 'Export',
+    stockCheckPdf: 'Stock Check Sheet (PDF)',
+    export: 'Export (Excel)',
     committedQty: 'Committed Qty',
+    stockValue: 'Stock Value',
     actualQty: 'Actual Qty',
     totalMismatchWarning: 'Total mismatch detected. Enable "Save despite difference" toggle to proceed.',
     noProductsFoundForDistributor: 'No products found for this distributor',
+    unsavedChanges: 'Unsaved Changes',
     pendingStockDiff: 'Pending Stock Differences',
     pendingDiffMessage: 'There are stock differences that need to be confirmed through sales registration.',
-    stockCheckPdf: 'Stock Check Sheet (PDF)',
-    export: 'Export (Excel)',
     confirmMatchMessage: 'Are you sure all quantities match? This will record that the stock has been verified with no differences.',
     stockVerifiedMatch: 'Stock verification confirmed - all quantities match!',
     resetValues: 'Reset Values',
@@ -332,6 +390,7 @@ export default {
     valuesReset: 'Values reset to committed quantities',
     reviewSaved: 'Review saved',
     reviewSavedWithDiff: 'Review saved with {count} difference(s)',
+    stockCheckSheet: 'Distributor Stock Check Sheet',
   },
   
   // Clients
@@ -342,6 +401,15 @@ export default {
     name: 'Name',
     phone: 'Phone',
     address: 'Address',
+    balance: 'Total Liability',
+    unpaidSales: 'Unpaid Sales',
+    unpaidSalesTitle: 'Unpaid sales list for client: {name}',
+    statistics: 'Statistics',
+    statisticsTitle: 'Customer Statistics: {name}',
+    totalPurchases: 'Total Purchases',
+    totalInvoices: 'Total Invoices',
+    topProducts: 'Most Purchased Products',
+    monthlyTrend: 'Monthly Sales Trend (6 Months)',
   },
   
   // Stock Transfers
@@ -408,6 +476,21 @@ export default {
     paymentAdded: 'Payment added successfully',
     paymentDeleted: 'Payment deleted',
     confirmDeletePayment: 'Are you sure you want to delete this payment?',
+    totalReceipt: 'Total Receipt',
+    confirmDeleteTitle: 'Confirm Delete',
+    failedToLoadPayments: 'Failed to load payments',
+    amountMustBePositive: 'Amount must be greater than 0',
+    failedToAddPayment: 'Failed to add payment',
+    failedToDeletePayment: 'Failed to delete payment',
+    checkDue: 'Check Due',
+    paid: 'Paid',
+    unpaid: 'Unpaid',
+    partial: 'Partial',
+    paidCheck: 'Paid (Check)',
+  },
+  
+  payment: {
+    status: 'Payment Status',
   },
   
   // Users
@@ -459,6 +542,27 @@ export default {
     notes: 'Notes',
   },
 
+  // Return Notes
+  returnNotes: {
+    viewReturnNote: 'View Return Note',
+    saveAsPdf: 'Save as PDF',
+    date: 'Date',
+    orderNo: 'Order No',
+    returnNoteTitle: 'Return Note',
+    yourCompany: 'Your Company',
+    distributor: 'Distributor',
+    phone: 'Phone',
+    vehicle: 'Vehicle',
+    type: 'Type',
+    orderType: 'Order Type',
+    return: 'Return',
+    orderDate: 'Order Date',
+    description: 'Description',
+    quantity: 'Quantity',
+    unit: 'Unit',
+    totalQuantity: 'Total Quantity',
+  },
+
   // Reports
   reports: {
     title: 'Reports',
@@ -476,6 +580,11 @@ export default {
     revenue: 'Revenue',
     cost: 'Cost',
     profit: 'Profit',
+    transactions: 'Transactions',
+    topProducts: 'Top Products',
+    profitAnalysis: 'Profit Analysis',
+    sortBy: 'Sort By',
+    rank: 'Rank',
   },
 
   // System
@@ -526,5 +635,7 @@ export default {
     deliveryNoteContentNotFound: 'Delivery note content not found',
     exportedSuccessfully: 'Exported successfully',
     cannotDeleteClientWithSales: 'Cannot delete client with existing sales receipts',
+    noDataToExport: 'No data to export',
+    exportCompleted: 'Export completed',
   },
 };

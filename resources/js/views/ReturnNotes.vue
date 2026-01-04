@@ -2,7 +2,7 @@
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
       <div class="text-h4">{{ $t('nav.returnNotes') }}</div>
-      <q-btn color="info" icon="add" :label="$t('common.add')" @click="openDialog" />
+      <q-btn color="secondary" icon="add" :label="$t('common.add')" @click="openDialog" />
     </div>
 
     <!-- Filters -->
@@ -58,7 +58,7 @@
       </template>
       <template v-slot:body-cell-order_date="props">
         <q-td :props="props">
-          {{ props.value ? new Date(props.value).toLocaleDateString('en-GB') : 'N/A' }}
+          {{ props.value ? formatDate(props.value) : 'N/A' }}
         </q-td>
       </template>
       <template v-slot:body-cell-actions="props">
@@ -528,7 +528,7 @@ const openDialog = async () => {
   // Get next order number from API
   let nextOrderNumber = '';
   try {
-    const response = await api.get('/distribution-orders/next-number');
+    const response = await api.get('/distribution-orders/next-number', { params: { type: 'entree' } });
     nextOrderNumber = response.data.order_number;
   } catch (error) {
     console.error('Failed to get next order number:', error);
@@ -900,9 +900,17 @@ const saveAsPDF = async () => {
 
 const deleteOrder = async (order) => {
   $q.dialog({
-    title: 'Confirm',
-    message: `Delete return note "${order.order_number}"?`,
-    cancel: true,
+    title: t('common.confirm'),
+    message: t('messages.confirmDelete') + ` "${order.order_number}"?`,
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
+    ok: {
+      label: t('common.ok'),
+      color: 'negative'
+    },
+    persistent: true,
   }).onOk(async () => {
     try {
       await api.delete(`/distribution-orders/${order.id}`);

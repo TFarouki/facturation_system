@@ -305,7 +305,7 @@
                 <q-td :props="props">
                   <q-select
                     v-model="props.row.price_type_used"
-                    :options="priceTypeOptions"
+                    :options="getFilteredPriceTypes(props.row)"
                     option-value="value"
                     option-label="label"
                     outlined
@@ -572,7 +572,7 @@
         <q-card-section class="bg-primary text-white">
           <div class="text-h6">{{ $t('purchases.paymentHistory') }}</div>
           <div class="text-subtitle2" v-if="selectedReceiptForPayment">
-            Receipt #{{ selectedReceiptForPayment.receipt_number }} - {{ selectedReceiptForPayment.client?.name }}
+            {{ $t('sales.receiptNumber') }} #{{ selectedReceiptForPayment.receipt_number }} - {{ selectedReceiptForPayment.client?.name }}
           </div>
         </q-card-section>
 
@@ -982,6 +982,15 @@ const handleProductSelection = (item, productId) => {
   const maxQty = getVanStockQuantity(productId);
   item.quantity = maxQty;
 
+  // Ensure selected price type is valid (price > 0)
+  const availableTypes = getFilteredPriceTypes(item);
+  if (availableTypes.length > 0) {
+    const isCurrentValid = availableTypes.some(opt => opt.value === item.price_type_used);
+    if (!isCurrentValid) {
+      item.price_type_used = availableTypes[0].value;
+    }
+  }
+
   // Update price when product is selected
   updatePriceForItem(item);
 };
@@ -991,6 +1000,17 @@ const isProductAlreadySelected = (productId, currentItemId) => {
   return form.value.items.some(item => 
     item.product_id === productId && item.id !== currentItemId
   );
+};
+
+const getFilteredPriceTypes = (item) => {
+  if (!item.product_id) return priceTypeOptions.value;
+  
+  const filtered = priceTypeOptions.value.filter(opt => {
+    const price = getProductPrice(item.product_id, opt.value);
+    return price > 0;
+  });
+
+  return filtered.length > 0 ? filtered : priceTypeOptions.value;
 };
 
 const shouldShowProductOption = (product, currentRowId) => {
@@ -1058,9 +1078,7 @@ const openDialog = async () => {
 
   // Generate next receipt number
   try {
-    const response = await api.get('/distribution-orders/next-number?type=sales');
-    // Note: API might need update to handle 'sales' type or a separate endpoint
-    // For now using the logic if available or defaulting
+    const response = await api.get('/sales/next-receipt-number');
     if (response.data.receipt_number) {
         form.value.receipt_number = response.data.receipt_number;
     }
@@ -1102,14 +1120,14 @@ const fetchPayments = async (receiptId) => {
     console.error('Error fetching payments:', error);
     $q.notify({
       color: 'negative',
-      message: 'Failed to load payments'
+      message: t('payments.failedToLoadPayments')
     });
   }
 };
 
 const savePayment = async () => {
   if (paymentForm.value.amount <= 0) {
-    $q.notify({ color: 'negative', message: 'Amount must be greater than 0' });
+    $q.notify({ color: 'negative', message: t('payments.amountMustBePositive') });
     return;
   }
   
@@ -1119,7 +1137,7 @@ const savePayment = async () => {
     if (!payload.check_date) payload.check_date = null;
 
     await api.post(`/sales/${selectedReceiptForPayment.value.id}/payments`, payload);
-    $q.notify({ color: 'positive', message: 'Payment added successfully' });
+    $q.notify({ color: 'positive', message: t('payments.paymentAdded') });
     fetchPayments(selectedReceiptForPayment.value.id);
     loadReceipts(); 
     
@@ -1129,7 +1147,7 @@ const savePayment = async () => {
     paymentForm.value.note = '';
   } catch (error) {
     console.error('Error adding payment:', error);
-    $q.notify({ color: 'negative', message: 'Failed to add payment' });
+    $q.notify({ color: 'negative', message: t('payments.failedToAddPayment') });
   } finally {
     saving.value = false;
   }
@@ -1137,19 +1155,26 @@ const savePayment = async () => {
 
 const deletePayment = async (paymentId) => {
   $q.dialog({
-    title: 'Confirm Delete',
-    message: 'Are you sure you want to delete this payment?',
-    cancel: true,
+    title: t('payments.confirmDeleteTitle'),
+    message: t('payments.confirmDeletePayment'),
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
+    ok: {
+      label: t('common.ok'),
+      color: 'negative'
+    },
     persistent: true,
   }).onOk(async () => {
     try {
       await api.delete(`/sales-payments/${paymentId}`);
-      $q.notify({ color: 'positive', message: 'Payment deleted' });
+      $q.notify({ color: 'positive', message: t('payments.paymentDeleted') });
       fetchPayments(selectedReceiptForPayment.value.id);
       loadReceipts();
     } catch (error) {
       console.error('Error deleting payment:', error);
-      $q.notify({ color: 'negative', message: 'Failed to delete payment' });
+      $q.notify({ color: 'negative', message: t('payments.failedToDeletePayment') });
     }
   });
 };
@@ -1187,23 +1212,23 @@ const getPaymentInfo = (receipt) => {
     );
     
     if (pendingChecks.length > 0) {
-      const dates = pendingChecks.map(p => new Date(p.check_date).toLocaleDateString('fr-FR')).join(', ');
-      tooltip = `Check Due: ${dates}`;
+      const dates = pendingChecks.map(p => formatDate(p.check_date)).join(', ');
+      tooltip = `${t('payments.checkDue')}: ${dates}`;
     }
   }
 
-  if (total <= 0) return { label: 'Paid', color: 'positive', icon: 'check_circle', tooltip };
+  if (total <= 0) return { label: t('sales.paid'), color: 'positive', icon: 'check_circle', tooltip };
 
   if (realPaid >= total - 0.01) {
-    return { label: 'Paid', color: 'positive', icon: 'check_circle', tooltip };
+    return { label: t('sales.paid'), color: 'positive', icon: 'check_circle', tooltip };
   } else if (totalPaid >= total - 0.01) {
-    return { label: 'Paid (Check)', color: 'info', icon: 'watch_later', tooltip };
+    return { label: t('sales.paidCheck'), color: 'info', icon: 'watch_later', tooltip };
   } else if (totalPaid > 0) {
     const remaining = total - totalPaid;
-    const partialTooltip = tooltip ? `${tooltip} | Remaining: ${remaining.toFixed(2)} DH` : `Remaining: ${remaining.toFixed(2)} DH`;
-    return { label: 'Partial', color: 'warning', icon: 'timelapse', tooltip: partialTooltip };
+    const partialTooltip = tooltip ? `${tooltip} | ${t('payments.remaining')}: ${remaining.toFixed(2)} DH` : `${t('payments.remaining')}: ${remaining.toFixed(2)} DH`;
+    return { label: t('sales.partial'), color: 'warning', icon: 'timelapse', tooltip: partialTooltip };
   } else {
-    return { label: 'Unpaid', color: 'negative', icon: 'cancel', tooltip };
+    return { label: t('sales.unpaid'), color: 'negative', icon: 'cancel', tooltip };
   }
 };
 
@@ -1606,19 +1631,18 @@ const editReceipt = async (receipt) => {
 
 const confirmDelete = (receipt) => {
   $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete receipt ${receipt.receipt_number}? This action cannot be undone.`,
-    cancel: true,
+    title: t('common.confirm'),
+    message: t('messages.confirmDelete') + ` ${receipt.receipt_number}?`,
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
     persistent: true,
     ok: {
-      label: 'Delete',
+      label: t('common.ok'),
       color: 'negative',
       icon: 'delete'
     },
-    cancel: {
-      label: 'Cancel',
-      flat: true
-    }
   }).onOk(async () => {
     try {
       await api.delete(`/sales/${receipt.id}`);

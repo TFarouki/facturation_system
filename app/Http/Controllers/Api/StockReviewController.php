@@ -154,5 +154,17 @@ class StockReviewController extends Controller
 
         return response()->json(['message' => 'Review deleted successfully']);
     }
+
+    /**
+     * Get summary of stock reviews (for dashboard)
+     */
+    public function getSummary()
+    {
+        $pendingCount = StockReview::where('status', 'pending')->count();
+        
+        return response()->json([
+            'pending_count' => $pendingCount,
+        ]);
+    }
 }
 

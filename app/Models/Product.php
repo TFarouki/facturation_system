@@ -20,13 +20,16 @@ class Product extends Model
         'unit_id',
         'current_stock_quantity',
         'cmup_cost',
+        'cmup',
         'barcode',
         'category_id',
+        'min_stock_level',
     ];
     
     protected $casts = [
         'current_stock_quantity' => 'decimal:2',
         'cmup_cost' => 'decimal:2',
+        'cmup' => 'decimal:4',
     ];
 
     public function category()

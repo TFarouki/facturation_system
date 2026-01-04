@@ -54,7 +54,7 @@
       </template>
       <template v-slot:body-cell-date="props">
         <q-td :props="props">
-          {{ props.row.invoice_date ? new Date(props.row.invoice_date).toLocaleDateString('en-GB') : 'N/A' }}
+          {{ props.row.invoice_date ? formatDate(props.row.invoice_date) : 'N/A' }}
         </q-td>
       </template>
       <template v-slot:body-cell-total_calculated="props">
@@ -788,7 +788,6 @@ import { useI18n } from 'vue-i18n';
 import api from '../api';
 import CategorySelect from '../components/CategorySelect.vue';
 import TaxSelect from '../components/TaxSelect.vue';
-import { formatDateForInput } from '../utils/invoiceUtils';
 
 
 const $q = useQuasar();
@@ -1185,7 +1184,7 @@ const handleSaveAttempt = () => {
 
 const confirmSaveWithDifference = () => {
   $q.dialog({
-    title: 'Confirm Save',
+    title: t('common.confirm'),
     message: t('purchases.confirmSaveWithDifference', { difference: Math.abs(totalDifference.value).toFixed(2) }),
     cancel: true,
     persistent: true,
@@ -1272,11 +1271,11 @@ const viewDetails = async (invoice) => {
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  if (isNaN(date.getTime())) return dateString;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const calculateSubtotal = () => {
@@ -1759,7 +1758,7 @@ const editInvoice = async (invoice) => {
       id: invoiceData.id,
       supplier_id: invoiceData.supplier_id,
       invoice_number: invoiceData.invoice_number,
-      invoice_date: formatDateForInput(invoiceData.invoice_date), // Convert ISO to yyyy-MM-dd
+      invoice_date: formatDate(invoiceData.invoice_date), // Convert ISO to yyyy-MM-dd
       invoice_image: null, // Don't pre-populate file input
       notes: invoiceData.notes || '',
       manual_total: invoiceData.total_in_invoice || invoiceData.total_amount,
@@ -1911,7 +1910,15 @@ const exportToExcel = () => {
   }
 
   // Prepare CSV content
-  const headers = ['Invoice #', 'Supplier', 'Date', 'Total (DH)', 'Items Count', 'Notes'];
+  const headers = [
+    t('purchases.invoiceNumber'),
+    t('purchases.supplier'),
+    t('common.date'),
+    t('common.total') + ' (DH)',
+    t('payment.status'),
+    t('sales.itemsCount'),
+    t('common.notes')
+  ];
   const csvRows = [];
   
   // Add UTF-8 BOM for Excel to recognize Arabic characters
@@ -1919,11 +1926,15 @@ const exportToExcel = () => {
   csvRows.push(headers.join(','));
   
   data.forEach(invoice => {
+    // Calculate payment status
+    const paymentInfo = getPaymentInfo(invoice);
+    
     const row = [
       `"${invoice.invoice_number || ''}"`,
-      `"${invoice.supplier?.name || 'N/A'}"`,
+      `"${invoice.supplier?.name || 'N/A'}"`, 
       `"${invoice.invoice_date || ''}"`,
-      invoice.total_amount ? invoice.total_amount.toFixed(2) : '0.00',
+      parseFloat(invoice.total_amount || 0).toFixed(2),
+      `"${paymentInfo.label}"`,
       invoice.details_count || 0,
       `"${invoice.notes || ''}"`
     ];
@@ -2056,7 +2067,7 @@ const getPaymentInfo = (invoice) => {
     );
     
     if (pendingChecks.length > 0) {
-      const dates = pendingChecks.map(p => new Date(p.check_date).toLocaleDateString(t('common.locale_code') || 'fr-FR')).join(', ');
+      const dates = pendingChecks.map(p => formatDate(p.check_date)).join(', ');
       tooltip = t('payments.checkDue') + `: ${dates}`;
     }
   }

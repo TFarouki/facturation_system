@@ -50,6 +50,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('distribution-orders', DistributionOrderController::class);
     Route::get('/distribution-orders/report/sales', [DistributionOrderController::class, 'salesReport']);
     Route::apiResource('purchases', PurchaseController::class);
+    Route::get('/sales/report', [SalesController::class, 'getSalesReport']);
+    Route::get('/sales/next-receipt-number', [SalesController::class, 'getNextReceiptNumber']);
     Route::apiResource('sales', SalesController::class)->parameters(['sales' => 'receipt']);
     Route::post('/sales/{id}/payments', [SalesController::class, 'addPayment']);
     Route::get('/sales/{id}/payments', [SalesController::class, 'getPayments']);
@@ -73,15 +75,15 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Clients
     Route::get('/clients/search', [ClientController::class, 'search']);
+    Route::get('/clients/{id}/unpaid-sales', [ClientController::class, 'getUnpaidSales']);
+    Route::get('/clients/{id}/statistics', [ClientController::class, 'getStatistics']);
     Route::apiResource('clients', ClientController::class);
-
-    // Sales
-    // Sales routes are already defined via apiResource above
-    Route::get('/sales/next-receipt-number', [SalesController::class, 'getNextReceiptNumber']);
 
     
     // Reports
     Route::get('/reports/profit', [ReportController::class, 'profit']);
+    Route::get('/reports/transactions', [ReportController::class, 'getTransactions']);
+    Route::get('/reports/top-products', [ReportController::class, 'getTopProducts']);
     Route::post('/reports/monthly-zero', [ReportController::class, 'monthlyZero']);
 
     // Settings
@@ -90,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/settings/logo', [SettingController::class, 'uploadLogo']);
 
     // Stock Reviews
+    Route::get('/stock-reviews/summary', [StockReviewController::class, 'getSummary']);
     Route::get('/stock-reviews', [StockReviewController::class, 'index']);
     Route::post('/stock-reviews', [StockReviewController::class, 'store']);
     Route::get('/stock-reviews/pending/{distributor}', [StockReviewController::class, 'getPending']);

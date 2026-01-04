@@ -75,4 +75,67 @@ class ReportController extends Controller
             'timestamp' => now(),
         ]);
     }
+
+    public function getTransactions(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $receipts = SalesReceipt::with(['client', 'distributor'])
+            ->whereBetween('receipt_date', [$request->start_date, $request->end_date])
+            ->get()
+            ->map(function ($receipt) {
+                $total = $receipt->details()->selectRaw('SUM(quantity * selling_price) as total')->value('total') ?? 0;
+                $cost = $receipt->details()
+                    ->join('products', 'sales_details.product_id', '=', 'products.id')
+                    ->selectRaw('SUM((quantity + COALESCE(promo_quantity, 0)) * products.cmup_cost) as total')
+                    ->value('total') ?? 0;
+                
+                return [
+                    'id' => $receipt->id,
+                    'receipt_number' => $receipt->receipt_number,
+                    'date' => $receipt->receipt_date,
+                    'client' => $receipt->client->name ?? 'N/A',
+                    'distributor' => $receipt->distributor->name ?? 'N/A',
+                    'total_amount' => round($total, 2),
+                    'profit' => round($total - $cost, 2),
+                ];
+            });
+
+        return response()->json($receipts);
+    }
+
+    public function getTopProducts(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'sort_by' => 'nullable|string|in:quantity,revenue,profit',
+        ]);
+
+        $sortBy = $request->get('sort_by', 'quantity');
+
+        $query = SalesDetail::join('sales_receipts', 'sales_details.receipt_id', '=', 'sales_receipts.id')
+            ->join('products', 'sales_details.product_id', '=', 'products.id')
+            ->whereBetween('sales_receipts.receipt_date', [$request->start_date, $request->end_date])
+            ->select(
+                'products.name',
+                DB::raw('SUM(sales_details.quantity) as total_quantity'),
+                DB::raw('SUM(sales_details.quantity * sales_details.selling_price) as revenue'),
+                DB::raw('SUM(sales_details.quantity * (sales_details.selling_price - products.cmup_cost)) as profit')
+            )
+            ->groupBy('products.id', 'products.name');
+
+        if ($sortBy === 'revenue') {
+            $query->orderByDesc('revenue');
+        } elseif ($sortBy === 'profit') {
+            $query->orderByDesc('profit');
+        } else {
+            $query->orderByDesc('total_quantity');
+        }
+
+        return response()->json($query->limit(20)->get());
+    }
 }

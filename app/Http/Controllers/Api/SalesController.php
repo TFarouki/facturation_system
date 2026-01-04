@@ -218,37 +218,42 @@ class SalesController extends Controller
 
     public function destroy(SalesReceipt $receipt)
     {
-                \Log::info("Sale {$receipt}");
         try {
-            DB::transaction(function () use ($receipt) {
-                // 1. Restore Stock to Validator
-                $receipt->load('details');
-                foreach ($receipt->details as $detail) {
+            DB::beginTransaction();
+
+            // 1. Restore Stock to Distributor/Van
+            // We load details with product to ensure we have everything
+            $receipt->load('details');
+            
+            foreach ($receipt->details as $detail) {
+                $totalQuantity = floatval($detail->quantity) + floatval($detail->promo_quantity ?? 0);
+                
+                if ($totalQuantity > 0) {
                     $vanStock = \App\Models\DistributorStock::firstOrCreate(
-                        ['distributor_id' => $receipt->distributor_id, 'product_id' => $detail->product_id],
+                        [
+                            'distributor_id' => $receipt->distributor_id,
+                            'product_id' => $detail->product_id
+                        ],
                         ['quantity' => 0]
                     );
-                    $vanStock->increment('quantity', $detail->quantity + ($detail->promo_quantity ?? 0));
+                    
+                    $vanStock->increment('quantity', $totalQuantity);
+                    \Log::info("Restored {$totalQuantity} of product {$detail->product_id} to distributor {$receipt->distributor_id}");
                 }
-                
+            }
 
-                // 2. Soft Delete related records
-                $receipt->details()->delete();
-                \Log::info("Sales details deleted.");
+            // 2. Delete related records (Soft Delete)
+            $receipt->details()->delete();
+            $receipt->payments()->delete();
+            
+            // 3. Delete the receipt (Soft Delete)
+            $receipt->delete();
 
-                $receipt->payments()->delete();
-                \Log::info("Sale payments deleted.");
-                
-                // 3. Soft Delete the receipt
-                $receipt->delete();
-                \Log::info("Sale receipt deleted.");
-                
-                // Note: We do NOT delete the physical file here because it's a soft delete.
-                // It can be restored later.
-            });
-
+            DB::commit();
             return response()->json(['message' => 'Sales receipt deleted successfully']);
         } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error("Failed to delete sales receipt {$receipt->id}: " . $e->getMessage());
             return response()->json(['error' => 'Delete failed', 'message' => $e->getMessage()], 500);
         }
     }
@@ -260,7 +265,7 @@ class SalesController extends Controller
     public function getNextReceiptNumber()
     {
         $currentYear = date('Y');
-        $prefix = 'R';
+        $prefix = 'S';
         
         // Check if receipt_number column exists
         $columnExists = Schema::hasColumn('sales_receipts', 'receipt_number');
@@ -284,7 +289,7 @@ class SalesController extends Controller
             
             // Find the highest sequential number
             foreach ($receipts as $receiptNumber) {
-                // Check if receipt number matches pattern: R + YYYY + 5 digits
+                // Check if receipt number matches pattern: S + YYYY + 5 digits
                 if (preg_match('/^' . preg_quote($prefix) . $currentYear . '(\d{5})$/', $receiptNumber, $matches)) {
                     $number = intval($matches[1]);
                     if ($number >= $nextNumber) {
@@ -293,7 +298,7 @@ class SalesController extends Controller
                 }
             }
             
-            // Format: R + YYYY + 5-digit number (e.g., R202500001)
+            // Format: S + YYYY + 5-digit number (e.g., S202500001)
             $nextReceiptNumber = $prefix . $currentYear . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
             
             // Double-check that this number doesn't exist
@@ -347,5 +352,73 @@ class SalesController extends Controller
         $payment = SalesPayment::findOrFail($id);
         $payment->delete();
         return response()->json(null, 204);
+    }
+
+    /**
+     * Get sales report for a distributor with filters
+     */
+    public function getSalesReport(Request $request)
+    {
+        $request->validate([
+            'distributor_id' => 'required|exists:distributors,id',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'price_type' => 'nullable|string|in:wholesale,semi_wholesale,retail,all',
+        ]);
+
+        $query = SalesReceipt::with(['client', 'details.product', 'payments'])
+            ->where('distributor_id', $request->distributor_id);
+
+        if ($request->start_date) {
+            $query->where('receipt_date', '>=', $request->start_date);
+        }
+
+        if ($request->end_date) {
+            $query->where('receipt_date', '<=', $request->end_date);
+        }
+
+        if ($request->price_type && $request->price_type !== 'all') {
+            $query->whereHas('details', function ($q) use ($request) {
+                $q->where('price_type_used', $request->price_type);
+            });
+        }
+
+        $receipts = $query->latest('receipt_date')->get();
+
+        // Calculate totals and filter details by price type if needed
+        $report = $receipts->map(function ($receipt) use ($request) {
+            $filteredDetails = $receipt->details;
+            if ($request->price_type && $request->price_type !== 'all') {
+                $filteredDetails = $receipt->details->filter(function ($detail) use ($request) {
+                    return $detail->price_type_used === $request->price_type;
+                });
+            }
+
+            $total = $filteredDetails->reduce(function ($carry, $item) {
+                return $carry + ($item->quantity * $item->selling_price);
+            }, 0);
+
+            $profit = $filteredDetails->reduce(function ($carry, $item) {
+                $cost = ($item->quantity + ($item->promo_quantity ?? 0)) * ($item->product->cmup ?? 0);
+                $revenue = $item->quantity * $item->selling_price;
+                return $carry + ($revenue - $cost);
+            }, 0);
+
+            return [
+                'id' => $receipt->id,
+                'receipt_number' => $receipt->receipt_number,
+                'receipt_date' => $receipt->receipt_date,
+                'client' => $receipt->client,
+                'total_amount' => $total,
+                'total_profit' => $profit,
+                'details' => $filteredDetails->values(),
+            ];
+        });
+
+        return response()->json([
+            'sales' => $report,
+            'total_period_amount' => $report->sum('total_amount'),
+            'total_period_profit' => $report->sum('total_profit'),
+        ]);
     }
 }

@@ -12,14 +12,7 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-md-3">
-        <q-card class="stat-card">
-          <q-card-section>
-            <div class="text-h6">{{ $t('dashboard.activeCycles') }}</div>
-            <div class="text-h3 text-secondary">{{ stats.activeCycles }}</div>
-          </q-card-section>
-        </q-card>
-      </div>
+
 
       <div class="col-12 col-md-3">
         <q-card class="stat-card">
@@ -38,10 +31,47 @@
           </q-card-section>
         </q-card>
       </div>
+
+      <div class="col-12 col-md-3">
+        <q-card class="stat-card" :class="{ 'bg-orange-1': stats.pendingReviews > 0 }">
+          <q-card-section>
+            <div class="text-h6" :class="{ 'text-orange-9': stats.pendingReviews > 0 }">
+              {{ $t('dashboard.pendingReviews') }}
+            </div>
+            <div class="text-h3" :class="stats.pendingReviews > 0 ? 'text-orange-9' : 'text-grey-5'">
+              {{ stats.pendingReviews }}
+            </div>
+          </q-card-section>
+          <q-card-actions v-if="stats.pendingReviews > 0" align="right">
+            <q-btn flat color="orange-9" :label="$t('common.view')" to="/distributor-stock" />
+          </q-card-actions>
+        </q-card>
+      </div>
     </div>
 
     <div class="row q-col-gutter-md q-mt-md">
-      <div class="col-12">
+      <div class="col-12 col-md-8">
+        <q-card>
+          <q-card-section>
+            <div class="text-h6 text-warning">{{ $t('dashboard.lowStockProducts') }}</div>
+          </q-card-section>
+          <q-separator />
+          <q-table
+            :rows="lowStockProducts"
+            :columns="lowStockColumns"
+            row-key="id"
+            flat
+            :pagination="{ rowsPerPage: 5 }"
+          >
+            <template v-slot:body-cell-current_stock_quantity="props">
+              <q-td :props="props" class="text-negative text-weight-bold">
+                {{ formatQuantity(props.row.current_stock_quantity) }}
+              </q-td>
+            </template>
+          </q-table>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-4">
         <q-card>
           <q-card-section>
             <div class="text-h6">{{ $t('dashboard.recentActivity') }}</div>
@@ -75,10 +105,12 @@ const { t } = useI18n();
 
 const stats = ref({
   totalProducts: 0,
-  activeCycles: 0,
   monthlySales: 0,
   lowStock: 0,
+  pendingReviews: 0,
 });
+
+const lowStockProducts = ref([]);
 
 const recentActivity = computed(() => [
   { id: 1, icon: 'shopping_cart', color: 'primary', title: t('dashboard.newPurchaseInvoice'), time: t('dashboard.hoursAgo', [2]) },
@@ -88,17 +120,37 @@ const recentActivity = computed(() => [
 
 onMounted(async () => {
   try {
-    const [products, cycles] = await Promise.all([
-      api.get('/products'),
-      api.get('/cycles'),
-    ]);
+    const products = await api.get('/products');
     
     stats.value.totalProducts = products.data.length;
-    stats.value.activeCycles = cycles.data.filter(c => c.status === 'open').length;
+    
+    // Calculate low stock items using the same logic as Inventory.vue
+    const lowStockItems = products.data.filter(product => {
+      const quantity = parseFloat(product.current_stock_quantity) || 0;
+      const minStock = product.min_stock_level || 10;
+      return quantity > 0 && quantity <= minStock;
+    });
+
+    stats.value.lowStock = lowStockItems.length;
+    lowStockProducts.value = lowStockItems;
+
+    // Fetch pending stock reviews count
+    const reviewsSummary = await api.get('/stock-reviews/summary');
+    stats.value.pendingReviews = reviewsSummary.data.pending_count;
   } catch (error) {
     console.error('Failed to load dashboard stats:', error);
   }
 });
+const lowStockColumns = computed(() => [
+  { name: 'name', label: t('products.name'), field: 'name', align: 'left' },
+  { name: 'current_stock_quantity', label: t('products.stock'), field: 'current_stock_quantity', align: 'center' },
+  { name: 'min_stock_level', label: t('products.minStockLevel'), field: row => row.min_stock_level || 10, align: 'center' },
+]);
+
+const formatQuantity = (quantity) => {
+  const qty = parseFloat(quantity) || 0;
+  return qty.toFixed(2);
+};
 </script>
 
 <style scoped>

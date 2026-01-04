@@ -160,19 +160,22 @@
               </div>
               
               <!-- Stock Quantity and Cost -->
-              <div class="col-6">
+              <div class="col-4">
                 <q-input v-model.number="form.current_stock_quantity" :label="$t('products.stock') + ' *'" type="number" outlined dense :rules="[val => val >= 0 || $t('messages.required')]" />
               </div>
-              <div class="col-6">
+              <div class="col-4">
+                 <q-input v-model.number="form.min_stock_level" :label="$t('products.minStockLevel')" type="number" outlined dense :rules="[val => val >= 0 || $t('messages.required')]" />
+              </div>
+              <div class="col-4">
                 <q-input 
-                  v-if="!editMode"
-                  v-model.number="form.initial_cost" 
-                  :label="$t('products.initialCost') + ' *'" 
+                  v-model.number="form.cmup" 
+                  :label="$t('inventory.cmup') + ' *'" 
                   type="number" 
                   outlined 
                   dense 
+                  step="0.01"
                   :rules="[val => val >= 0 || $t('messages.required')]" 
-                  :hint="$t('products.cmup')"
+                  hint="Factor (e.g. 0.7)"
                 />
               </div>
               
@@ -358,7 +361,7 @@ const familyNameInputRef = ref(null);
 // Table features
 const searchText = ref('');
 const showActionsColumn = ref(true);
-const visibleColumns = ref(['product_code', 'product_family', 'category', 'unit', 'stock', 'cmup', 'wholesale', 'semi_wholesale', 'retail', 'tax']);
+const visibleColumns = ref(['product_code', 'product_family', 'category', 'unit', 'stock', 'min_stock_level', 'cmup', 'cmup_cost', 'wholesale', 'semi_wholesale', 'retail', 'tax']);
 const pagination = ref({
   rowsPerPage: 10
 });
@@ -375,8 +378,9 @@ const form = ref({
   wholesale_price: 0,
   semi_wholesale_price: 0,
   retail_price: 0,
-  initial_cost: 0,
+  cmup: 0.7,
   tax_rate: 0,
+  min_stock_level: 10,
 });
 
 const priceForm = ref({
@@ -393,7 +397,9 @@ const columns = computed(() => [
   { name: 'category', label: t('products.category'), field: row => row.category?.name || '-', align: 'left', sortable: true },
   { name: 'unit', label: t('products.unit'), field: row => row.unit?.unit_name_ar || '-', align: 'left', sortable: true },
   { name: 'stock', label: t('products.stock'), field: row => row.current_stock_quantity || 0, align: 'right', sortable: true, format: val => Math.floor(val) },
-  { name: 'cmup', label: t('products.cmup'), field: row => row.cmup_cost || 0, align: 'right', sortable: true, format: val => `${val} DH` },
+  { name: 'min_stock_level', label: t('products.minStockLevel'), field: row => row.min_stock_level || 10, align: 'right', sortable: true },
+  { name: 'cmup', label: t('inventory.cmup'), field: row => row.cmup || 0.7, align: 'center', sortable: true },
+  { name: 'cmup_cost', label: t('purchases.purchasePrice'), field: row => row.cmup_cost || 0, align: 'right', sortable: true, format: val => `${val} DH` },
   { name: 'wholesale', label: t('products.wholesalePrice'), field: row => row.current_price?.wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
   { name: 'semi_wholesale', label: t('products.semiWholesalePrice'), field: row => row.current_price?.semi_wholesale_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
   { name: 'retail', label: t('products.retailPrice'), field: row => row.current_price?.retail_price || 0, align: 'right', sortable: true, format: val => `${val} DH` },
@@ -425,7 +431,7 @@ const filteredProducts = computed(() => {
       return (
         product.name?.toLowerCase().includes(search) ||
         product.product_code?.toLowerCase().includes(search) ||
-        product.product_family?.toLowerCase().includes(search) ||
+        (typeof product.product_family === 'string' ? product.product_family?.toLowerCase().includes(search) : product.product_family?.name?.toLowerCase().includes(search)) ||
         product.category?.name?.toLowerCase().includes(search) ||
         product.unit?.unit_name_ar?.toLowerCase().includes(search) ||
         product.unit?.unit_name_en?.toLowerCase().includes(search) ||
@@ -587,6 +593,8 @@ const editProduct = (product) => {
     semi_wholesale_price: product.current_price?.semi_wholesale_price || 0,
     retail_price: product.current_price?.retail_price || 0,
     tax_rate: product.current_price?.tax_rate || 0,
+    cmup: product.cmup || 0.7,
+    min_stock_level: product.min_stock_level || 10,
   };
   showDialog.value = true;
 };
@@ -611,7 +619,7 @@ const closeProductDialog = () => {
     wholesale_price: 0,
     semi_wholesale_price: 0,
     retail_price: 0,
-    initial_cost: 0,
+    cmup: 0.7,
     tax_rate: 0,
   };
 };
@@ -640,7 +648,7 @@ const saveProduct = async () => {
         retail_price: form.value.retail_price || 0,
         retail_price: form.value.retail_price || 0,
         tax_rate: form.value.tax_rate || 0,
-        initial_cost: form.value.initial_cost || 0,
+        cmup: form.value.cmup || 0.7,
       };
       await api.post('/products', productData);
       $q.notify({ type: 'positive', message: t('messages.savedSuccessfully') });
@@ -686,7 +694,15 @@ const deleteProduct = async (product) => {
   $q.dialog({
     title: t('common.confirm'),
     message: t('messages.confirmDelete') + ` "${product.name}"?`,
-    cancel: true,
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
+    ok: {
+      label: t('common.ok'),
+      color: 'negative'
+    },
+    persistent: true,
   }).onOk(async () => {
     try {
       await api.delete(`/products/${product.id}`);
@@ -706,7 +722,8 @@ const exportToExcel = () => {
       [t('products.category')]: product.category?.name || '-',
       [t('products.unit')]: product.unit?.unit_name_ar || '-',
       [t('products.stock')]: Math.floor(product.current_stock_quantity || 0),
-      [t('products.cmup') + ' (DH)']: product.cmup_cost || 0,
+      [t('inventory.cmup')]: product.cmup || 0.7,
+      [t('purchases.purchasePrice') + ' (DH)']: product.cmup_cost || 0,
       [t('products.wholesalePrice') + ' (DH)']: product.current_price?.wholesale_price || 0,
       [t('products.semiWholesalePrice') + ' (DH)']: product.current_price?.semi_wholesale_price || 0,
       [t('products.retailPrice') + ' (DH)']: product.current_price?.retail_price || 0,

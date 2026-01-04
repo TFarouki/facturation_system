@@ -100,7 +100,7 @@ const columns = computed(() => [
   { name: 'name', label: t('users.name'), field: 'name', align: 'left', sortable: true },
   { name: 'email', label: t('users.email'), field: 'email', align: 'left', sortable: true },
   { name: 'role', label: t('users.role'), field: 'role', align: 'center', sortable: true },
-  { name: 'created_at', label: t('users.createdAt'), field: row => new Date(row.created_at).toLocaleDateString(), align: 'left', sortable: true },
+  { name: 'created_at', label: t('users.createdAt'), field: row => formatDate(row.created_at), align: 'left', sortable: true },
   { name: 'actions', label: t('common.actions'), align: 'center' },
 ]);
 
@@ -171,6 +171,16 @@ const confirmDelete = (user) => {
       $q.notify({ type: 'negative', message: error.response?.data?.message || t('messages.error') });
     }
   });
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 onMounted(() => {

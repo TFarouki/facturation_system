@@ -218,8 +218,8 @@ class DistributionOrderController extends Controller
         $type = $request->query('type'); // sales, entree, sortie (default)
 
         if ($type === 'sales') {
-             // Sales Receipt format: "S" . YYYY . " " . 00000N
-             // e.g., S2025 000001
+             // Sales Receipt format: "S" . YYYY . "00001"
+             // e.g., S202500001
              
              // Get all receipt numbers for current year
              $receipts = \App\Models\SalesReceipt::withoutTrashed()
@@ -230,8 +230,8 @@ class DistributionOrderController extends Controller
              $nextNumber = 1;
              
              foreach ($receipts as $receiptNumber) {
-                 // Match S2025 000001
-                 if (preg_match('/^S' . $currentYear . ' (\d{6})$/', $receiptNumber, $matches)) {
+                 // Match S202500001
+                 if (preg_match('/^S' . $currentYear . '(\d{5})$/', $receiptNumber, $matches)) {
                      $number = intval($matches[1]);
                      if ($number >= $nextNumber) {
                          $nextNumber = $number + 1;
@@ -239,13 +239,13 @@ class DistributionOrderController extends Controller
                  }
              }
              
-             $nextReceiptNumber = 'S' . $currentYear . ' ' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+             $nextReceiptNumber = 'S' . $currentYear . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
              
              // Double check collision
              $attempts = 0;
              while (\App\Models\SalesReceipt::withTrashed()->where('receipt_number', $nextReceiptNumber)->exists() && $attempts < 10) {
                  $nextNumber++;
-                 $nextReceiptNumber = 'S' . $currentYear . ' ' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+                 $nextReceiptNumber = 'S' . $currentYear . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                  $attempts++;
              }
              
@@ -255,11 +255,11 @@ class DistributionOrderController extends Controller
         }
 
         // Default Distribution Order logic
+        $prefix = ($type === 'entree') ? 'R' : 'U';
         
-        // Get all order numbers for current year (excluding soft deleted)
-        // Use withoutTrashed() to explicitly exclude soft-deleted records
+        // Get all order numbers for current year (excluding soft deleted) with the specific prefix
         $orders = DistributionOrder::withoutTrashed()
-            ->where('order_number', 'like', $currentYear . '%')
+            ->where('order_number', 'like', $prefix . $currentYear . '%')
             ->pluck('order_number')
             ->toArray();
         
@@ -267,8 +267,8 @@ class DistributionOrderController extends Controller
         
         // Find the highest sequential number
         foreach ($orders as $orderNumber) {
-            // Check if order number matches pattern: YYYY + 5 digits
-            if (preg_match('/^' . $currentYear . '(\d{5})$/', $orderNumber, $matches)) {
+            // Check if order number matches pattern: Prefix + YYYY + 5 digits
+            if (preg_match('/^' . $prefix . $currentYear . '(\d{5})$/', $orderNumber, $matches)) {
                 $number = intval($matches[1]);
                 if ($number >= $nextNumber) {
                     $nextNumber = $number + 1;
@@ -276,15 +276,14 @@ class DistributionOrderController extends Controller
             }
         }
         
-        // Format: YYYY + 5-digit number (e.g., 202500001)
-        $nextOrderNumber = $currentYear . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+        // Format: Prefix + YYYY + 5-digit number (e.g., U202500001, R202500001)
+        $nextOrderNumber = $prefix . $currentYear . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
         
         // Double-check that this number doesn't exist (including soft-deleted)
-        // If it exists, increment and try again (max 10 attempts to avoid infinite loop)
         $attempts = 0;
         while (DistributionOrder::withTrashed()->where('order_number', $nextOrderNumber)->exists() && $attempts < 10) {
             $nextNumber++;
-            $nextOrderNumber = $currentYear . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            $nextOrderNumber = $prefix . $currentYear . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
             $attempts++;
         }
         
@@ -311,11 +310,13 @@ class DistributionOrderController extends Controller
 
         // Get all sortie orders
         $sortieQuery = DistributionOrder::where('distributor_id', $distributorId)
-            ->where('order_type', 'sortie');
+            ->where('order_type', 'sortie')
+            ->whereNull('deleted_at');
 
         // Get all entree orders
         $entreeQuery = DistributionOrder::where('distributor_id', $distributorId)
-            ->where('order_type', 'entree');
+            ->where('order_type', 'entree')
+            ->whereNull('deleted_at');
 
         if ($startDate) {
             $sortieQuery->where('order_date', '>=', $startDate);
@@ -442,7 +443,9 @@ class DistributionOrderController extends Controller
         $soldProducts = DB::table('sales_details')
             ->join('sales_receipts', 'sales_details.receipt_id', '=', 'sales_receipts.id')
             ->where('sales_receipts.distributor_id', $distributorId)
-            ->select('sales_details.product_id', DB::raw('SUM(sales_details.quantity) as sold_quantity'))
+            ->whereNull('sales_receipts.deleted_at')
+            ->whereNull('sales_details.deleted_at')
+            ->select('sales_details.product_id', DB::raw('SUM(sales_details.quantity + IFNULL(sales_details.promo_quantity, 0)) as sold_quantity'))
             ->groupBy('sales_details.product_id')
             ->get();
 
@@ -486,6 +489,7 @@ class DistributionOrderController extends Controller
                     'category' => $product->category,
                     'unit' => $product->unit,
                     'currentPrice' => $product->currentPrice,
+                    'wholesale_price' => $product->currentPrice ? $product->currentPrice->wholesale_price : 0,
                     'committed_quantity' => round($committedQty, 2),
                     'first_delivery_date' => $firstDeliveryMap[$product->id] ?? null,
                     'delivered_quantity' => round($deliveredQty, 2),

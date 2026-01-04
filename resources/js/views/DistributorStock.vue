@@ -59,7 +59,7 @@
 
     <!-- Summary Cards -->
     <div class="row q-col-gutter-md q-mb-md" v-if="selectedDistributor">
-      <div class="col-12 col-md-3">
+      <div class="col-12 col-md-2">
         <q-card class="bg-primary text-white">
           <q-card-section>
             <div class="text-subtitle2">{{ $t('distributorStock.totalProducts') }}</div>
@@ -68,18 +68,26 @@
         </q-card>
       </div>
       <div class="col-12 col-md-3">
-        <q-card class="bg-positive text-white">
+        <q-card class="bg-deep-purple text-white">
           <q-card-section>
-            <div class="text-subtitle2">{{ $t('distributorStock.committedQty') }}</div>
-            <div class="text-h4">{{ formatQuantity(summaryStats.totalQuantity) }}</div>
+            <div class="text-subtitle2">{{ $t('distributorStock.stockValue') }}</div>
+            <div class="text-h5">{{ formatCurrency(summaryStats.stockValue) }}</div>
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-12 col-md-3">
+      <div class="col-12 col-md-2">
+        <q-card class="bg-positive text-white">
+          <q-card-section>
+            <div class="text-subtitle2">{{ $t('distributorStock.committedQty') }}</div>
+            <div class="text-h5">{{ formatQuantity(summaryStats.totalQuantity) }}</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-2">
         <q-card :class="summaryStats.totalDifference !== 0 ? 'bg-negative' : 'bg-info'" class="text-white">
           <q-card-section>
             <div class="text-subtitle2">{{ $t('distributorStock.actualQty') }}</div>
-            <div class="text-h4">{{ formatQuantity(summaryStats.totalActual) }}</div>
+            <div class="text-h5">{{ formatQuantity(summaryStats.totalActual) }}</div>
           </q-card-section>
         </q-card>
       </div>
@@ -87,7 +95,7 @@
         <q-card :class="summaryStats.totalDifference !== 0 ? 'bg-negative' : 'bg-grey-6'" class="text-white">
           <q-card-section>
             <div class="text-subtitle2">{{ $t('distributorStock.difference') }}</div>
-            <div class="text-h4">{{ formatQuantity(summaryStats.totalDifference) }}</div>
+            <div class="text-h5">{{ formatQuantity(summaryStats.totalDifference) }}</div>
           </q-card-section>
         </q-card>
       </div>
@@ -284,8 +292,8 @@ const pendingReviews = ref({}); // Stored pending reviews from backend
 const columns = computed(() => [
   { name: 'product', label: t('products.name'), field: 'name', align: 'left', sortable: true },
   { name: 'first_delivery_date', label: t('common.date'), field: 'first_delivery_date', align: 'center', sortable: true },
-  { name: 'committed_quantity', label: t('distributorStock.committed'), field: 'committed_quantity', align: 'center', sortable: true },
-  { name: 'actual_quantity', label: t('distributorStock.actual'), field: 'actual_quantity', align: 'center' },
+  { name: 'committed_quantity', label: t('distributorStock.committedQty'), field: 'committed_quantity', align: 'center', sortable: true },
+  { name: 'actual_quantity', label: t('distributorStock.actualQty'), field: 'actual_quantity', align: 'center' },
   { name: 'difference', label: t('distributorStock.difference'), field: 'difference', align: 'center' },
 ]);
 
@@ -308,11 +316,17 @@ const summaryStats = computed(() => {
   const products = filteredProducts.value || [];
   const totalQuantity = products.reduce((sum, p) => sum + (parseFloat(p.committed_quantity) || 0), 0);
   const totalActual = products.reduce((sum, p) => sum + (parseFloat(stockReview.value[p.id]) || 0), 0);
+  const stockValue = products.reduce((sum, p) => {
+    const qty = parseFloat(p.committed_quantity) || 0;
+    const price = parseFloat(p.wholesale_price) || 0;
+    return sum + (qty * price);
+  }, 0);
   return {
     totalProducts: products.length,
     totalQuantity,
     totalActual,
     totalDifference: totalActual - totalQuantity,
+    stockValue,
   };
 });
 
@@ -350,6 +364,14 @@ const formatDate = (dateString) => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const formatCurrency = (value) => {
+  if (!value && value !== 0) return '0.00 MAD';
+  return parseFloat(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + ' MAD';
 };
 
 const getDifferenceClass = (productId, committedQty) => {

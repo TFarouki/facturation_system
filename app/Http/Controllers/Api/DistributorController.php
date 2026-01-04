@@ -57,7 +57,42 @@ class DistributorController extends Controller
 
         return response()->json($distributors);
     }
- 
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'vehicle_plate' => 'nullable|string|max:50',
+            'vehicle_type' => 'nullable|string|max:50',
+            'notes' => 'nullable|string',
+        ]);
+
+        $distributor = Distributor::create($request->all());
+
+        return response()->json($distributor, 201);
+    }
+
+    public function show(Distributor $distributor)
+    {
+        return response()->json($distributor);
+    }
+
+    public function update(Request $request, Distributor $distributor)
+    {
+        $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'vehicle_plate' => 'nullable|string|max:50',
+            'vehicle_type' => 'nullable|string|max:50',
+            'notes' => 'nullable|string',
+        ]);
+
+        $distributor->update($request->all());
+
+        return response()->json($distributor);
+    }
+
     public function destroy(Distributor $distributor)
     {
         // Check 1: Active Stock
@@ -68,7 +103,7 @@ class DistributorController extends Controller
 
         // Check 2: Financial Liability (Unpaid Sales)
         // Check manually
-        $sales = $distributor->salesReceipts()->with(['details', 'payments'])->get();
+        $sales = $distributor->sales()->with(['details', 'payments'])->get();
         $hasUnpaidSales = false;
         foreach ($sales as $sale) {
              $total = 0;
@@ -108,7 +143,7 @@ class DistributorController extends Controller
 
             // 2. Unpaid Sales
             $allSales = \App\Models\SalesReceipt::where('distributor_id', $id)
-                ->with(['client', 'details', 'payments'])
+                ->with(['client', 'details.product', 'payments'])
                 ->get();
             
             $unpaidSales = $allSales->map(function ($sale) {
@@ -120,8 +155,16 @@ class DistributorController extends Controller
                 $paid = $sale->payments->sum('amount');
                 $remaining = $total - $paid;
                 
+                // Calculate profit
+                $profit = $sale->details->reduce(function ($carry, $item) {
+                    $cost = ($item->quantity + ($item->promo_quantity ?? 0)) * ($item->product->cmup ?? 0);
+                    $revenue = $item->quantity * $item->selling_price;
+                    return $carry + ($revenue - $cost);
+                }, 0);
+
                 // Attach computed properties for frontend
                 $sale->total_amount = $total;
+                $sale->total_profit = $profit;
                 $sale->paid_amount = $paid;
                 $sale->remaining_amount = $remaining; // This is what frontend expects
                 $sale->balance_due = $remaining;
@@ -164,5 +207,39 @@ class DistributorController extends Controller
         $payment = \App\Models\DistributorPayment::findOrFail($paymentId);
         $payment->delete();
         return response()->json(null, 204);
+    }
+
+    public function addPayment(Request $request, $id)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'payment_method' => 'required|string',
+            'reference' => 'nullable|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        $distributor = Distributor::findOrFail($id);
+        
+        $payment = $distributor->payments()->create([
+            'amount' => $request->amount,
+            'payment_date' => $request->payment_date,
+            'payment_method' => $request->payment_method,
+            'reference' => $request->reference,
+            'notes' => $request->notes,
+        ]);
+
+        return response()->json($payment, 201);
+    }
+
+    public function getSettlementHistory($id)
+    {
+        $distributor = Distributor::findOrFail($id);
+        $payments = $distributor->payments()
+            ->orderBy('payment_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        return response()->json($payments);
     }
 }

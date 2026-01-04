@@ -225,7 +225,15 @@ const deleteSupplier = async (supplier) => {
   $q.dialog({
     title: t('purchases.confirmDeleteTitle'),
     message: t('purchases.confirmDeleteMessage', { name: supplier.name }),
-    cancel: true,
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
+    ok: {
+      label: t('common.ok'),
+      color: 'negative'
+    },
+    persistent: true,
   }).onOk(async () => {
     try {
       await api.delete(`/suppliers/${supplier.id}`);

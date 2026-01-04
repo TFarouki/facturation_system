@@ -58,7 +58,7 @@
       </template>
       <template v-slot:body-cell-order_date="props">
         <q-td :props="props">
-          {{ props.value ? new Date(props.value).toLocaleDateString('en-GB') : 'N/A' }}
+          {{ props.value ? formatDate(props.value) : 'N/A' }}
         </q-td>
       </template>
       <template v-slot:body-cell-items_count="props">
@@ -530,7 +530,7 @@ const openDialog = async () => {
   // Get next order number from API
   let nextOrderNumber = '';
   try {
-    const response = await api.get('/distribution-orders/next-number');
+    const response = await api.get('/distribution-orders/next-number', { params: { type: 'sortie' } });
     nextOrderNumber = response.data.order_number;
   } catch (error) {
     $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
@@ -946,9 +946,17 @@ const viewDetails = async (order) => {
 
 const deleteOrder = async (order) => {
   $q.dialog({
-    title: 'Confirm',
-    message: `Delete delivery note "${order.order_number}"?`,
-    cancel: true,
+    title: t('common.confirm'),
+    message: t('messages.confirmDelete') + ` "${order.order_number}"?`,
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
+    ok: {
+      label: t('common.ok'),
+      color: 'negative'
+    },
+    persistent: true,
   }).onOk(async () => {
     try {
       await api.delete(`/distribution-orders/${order.id}`);

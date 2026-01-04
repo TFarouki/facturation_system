@@ -53,9 +53,38 @@ export default {
     newPurchaseInvoice: 'Nouvelle facture d\'achat créée',
     cycleClosed: 'Cycle #{0} clôturé',
     newSaleRecorded: 'Nouvelle vente enregistrée',
-    hoursAgo: 'Il y a {0} heures',
-    dayAgo: 'Il y a 1 jour',
+    hoursAgo: 'il y a {0} heures',
+    dayAgo: 'il y a un jour',
+    lowStockProducts: 'Produits en stock faible',
     daysAgo: 'Il y a {0} jours',
+    pendingReviews: 'Révisions de stock en attente',
+  },
+
+  distributorStock: {
+    unsavedChanges: 'Modifications non enregistrées',
+    pendingStockDiff: 'Différences de stock en attente',
+    pendingDiffMessage: 'Il y a des révisions en attente avec des différences non résolues pour ce distributeur.',
+    stockCheckPdf: 'Exporter PDF',
+    export: 'Exporter',
+    selectDistributor: 'Sélectionner un distributeur',
+    searchProducts: 'Rechercher des produits',
+    totalProducts: 'Total Produits',
+    stockValue: 'Valeur du Stock',
+    committedQty: 'Qté Distribuée',
+    actualQty: 'Qté Réelle',
+    difference: 'Différence',
+    noProductsFoundForDistributor: 'Aucun produit assigné à ce distributeur',
+    confirmMatch: 'Confirmer la correspondance',
+    saveReview: 'Enregistrer la révision',
+    allDistributorsOverview: 'Aperçu des distributeurs',
+    resetValues: 'Réinitialiser les valeurs',
+    resetMessage: 'Êtes-vous sûr de vouloir réinitialiser toutes les valeurs ?',
+    valuesReset: 'Valeurs réinitialisées',
+    reviewSavedWithDiff: 'Révision enregistrée avec {count} différences',
+    reviewSaved: 'Révision enregistrée avec succès',
+    confirmMatchMessage: 'Êtes-vous sûr que toutes les quantités correspondent ?',
+    stockVerifiedMatch: 'Correspondance de stock confirmée',
+    stockCheckSheet: 'Fiche de contrôle de stock distributeur',
   },
   
   // Common
@@ -71,6 +100,7 @@ export default {
     loading: 'Chargement...',
     noData: 'Aucune donnée disponible',
     confirm: 'Confirmer',
+    ok: 'OK',
     yes: 'Oui',
     no: 'Non',
     all: 'Tous',
@@ -87,6 +117,7 @@ export default {
     recordsPerTable: 'enregistrements',
     of: 'de',
     select: 'Sélectionner',
+    distributor: 'Distributeur',
   },
 
   // Inventory
@@ -96,6 +127,8 @@ export default {
     lowStock: 'Stock faible',
     outOfStock: 'Rupture de stock',
     inDistribution: 'En distribution',
+    notInDistribution: 'Pas en distribution',
+    distributionStatus: 'État de distribution',
     stockTrend: 'Tendance Stock (12M)',
     priceTrend: 'Tendance Prix (12M)',
     totalProducts: 'Total Produits',
@@ -114,12 +147,19 @@ export default {
     purchasePrice: 'Prix d\'Achat',
     salePriceWholesale: 'Prix de Vente (Gros)',
     wholesale: 'Gros',
+    priceList: 'Liste de prix',
+    productsInDistribution: 'Produits en distribution',
+    totalInDistribution: 'Total en distribution',
+    quantity: 'Quantité',
+    distributorSignature: 'Signature du distributeur',
     inventoryCheckSheet: 'Fiche de Contrôle d\'Inventaire',
     na: 'N/D',
     actualCount: 'Quantité Réelle',
     difference: 'Différence',
     storekeeperSignature: 'Signature du Magasinier',
     auditorSignature: 'Signature de l\'Auditeur',
+    totalInventoryValue: 'Valeur totale du stock',
+    cmup: 'CMUP',
   },
   
   // Products
@@ -135,6 +175,7 @@ export default {
     category: 'Catégorie',
     description: 'Description',
     stock: 'Stock',
+    minStockLevel: 'Niveau de Stock Min',
     currentStock: 'Stock actuel',
     initialCost: 'Coût initial',
     wholesalePrice: 'Prix de gros',
@@ -155,6 +196,7 @@ export default {
     currentPrices: 'Prix actuels',
     product: 'Produit',
     price: 'Prix',
+    unknownProduct: 'Produit Inconnu',
   },
   
   // Sales
@@ -293,6 +335,17 @@ export default {
     newPurchasePrice: 'Nouveau prix d\'achat',
     noItemsInInvoice: 'Aucun article dans cette facture',
     logoName: 'Nom du Logo',
+    filterMismatch: 'Filtrer les différences',
+    totalMismatchWarning: 'Veuillez vérifier le total ! Il y a une différence entre le total déclaré et calculé.',
+    confirmSaveWithDifference: 'Il y a une différence de {difference} DH. Voulez-vous enregistrer quand même ?',
+  },
+
+  // Suppliers
+  suppliers: {
+    phone: 'Téléphone',
+    email: 'Email',
+    address: 'Adresse',
+    taxId: 'Identifiant Fiscal',
   },
   
   // Distributors
@@ -322,6 +375,13 @@ export default {
     stockValue: 'Valeur du Stock (Produits dans le Véhicule)',
     unpaidSalesTotal: 'Total des Ventes Non Payées',
     cannotDelete: 'Impossible de supprimer un distributeur ayant des produits en stock ou des ventes non payées (dette financière)',
+    salesReport: 'Rapport des Ventes',
+    salesReportTitle: 'Rapport des Ventes du Distributeur : {name}',
+    from: 'Du',
+    to: 'Au',
+    allSales: 'Toutes les Ventes',
+    totalPeriod: 'Total Période',
+    realizedProfit: 'Marge de Profit Réalisée',
   },
 
   // Distributor Stock Review
@@ -336,12 +396,24 @@ export default {
     searchProducts: 'Rechercher des produits...',
     totalProducts: 'Total Produits',
     allDistributorsOverview: 'Aperçu de tous les distributeurs',
-    stockCheckPdf: 'Vérification stock PDF',
-    export: 'Exporter',
+    stockCheckPdf: 'Fiche de contrôle de stock (PDF)',
+    export: 'Exporter (Excel)',
     committedQty: 'Qté Engagée',
+    stockValue: 'Valeur du Stock',
     actualQty: 'Qté Réelle',
     totalMismatchWarning: 'Différence de total détectée. Activez l\'option "Enregistrer malgré la différence de total" pour continuer.',
     noProductsFoundForDistributor: 'Aucun produit trouvé pour ce distributeur',
+    unsavedChanges: 'Modifications non enregistrées',
+    pendingStockDiff: 'Différences de stock en attente',
+    pendingDiffMessage: 'Il y a des révisions en attente avec des différences non résolues pour ce distributeur.',
+    resetValues: 'Réinitialiser les valeurs',
+    resetMessage: 'Êtes-vous sûr de vouloir réinitialiser toutes les valeurs ?',
+    valuesReset: 'Valeurs réinitialisées',
+    reviewSavedWithDiff: 'Révision enregistrée avec {count} différences',
+    reviewSaved: 'Révision enregistrée avec succès',
+    confirmMatchMessage: 'Êtes-vous sûr que toutes les quantités correspondent ?',
+    stockVerifiedMatch: 'Correspondance de stock confirmée',
+    stockCheckSheet: 'Fiche de contrôle de stock distributeur',
   },
   
   // Clients
@@ -352,6 +424,15 @@ export default {
     name: 'Nom',
     phone: 'Téléphone',
     address: 'Adresse',
+    balance: 'Total des charges',
+    unpaidSales: 'Ventes non payées',
+    unpaidSalesTitle: 'Liste des ventes non payées pour le client : {name}',
+    statistics: 'Statistiques',
+    statisticsTitle: 'Statistiques du Client : {name}',
+    totalPurchases: 'Total des Achats',
+    totalInvoices: 'Nombre de Factures',
+    topProducts: 'Produits les Plus Achetés',
+    monthlyTrend: 'Évolution des Ventes (6 mois)',
   },
   
   // Stock Transfers
@@ -418,6 +499,21 @@ export default {
     paymentAdded: 'Paiement ajouté avec succès',
     paymentDeleted: 'Paiement supprimé',
     confirmDeletePayment: 'Êtes-vous sûr de vouloir supprimer ce paiement ?',
+    totalReceipt: 'Total Bon',
+    confirmDeleteTitle: 'Confirmer la suppression',
+    failedToLoadPayments: 'Échec du chargement des paiements',
+    amountMustBePositive: 'Le montant doit être supérieur à 0',
+    failedToAddPayment: 'Échec de l\'ajout du paiement',
+    failedToDeletePayment: 'Échec de la suppression du paiement',
+    checkDue: 'Échéance du chèque',
+    paid: 'Payé',
+    unpaid: 'Non payé',
+    partial: 'Partiel',
+    paidCheck: 'Payé (Chèque)',
+  },
+  
+  payment: {
+    status: 'Statut de paiement',
   },
   
   // Users
@@ -469,6 +565,27 @@ export default {
     notes: 'Notes',
   },
 
+  // Return Notes
+  returnNotes: {
+    viewReturnNote: 'Voir le bon de retour',
+    saveAsPdf: 'Enregistrer en PDF',
+    date: 'Date',
+    orderNo: 'N° Commande',
+    returnNoteTitle: 'Bon de Retour',
+    yourCompany: 'Votre Société',
+    distributor: 'Distributeur',
+    phone: 'Téléphone',
+    vehicle: 'Véhicule',
+    type: 'Type',
+    orderType: 'Type de Commande',
+    return: 'Retour',
+    orderDate: 'Date de Commande',
+    description: 'Description',
+    quantity: 'Quantité',
+    unit: 'Unité',
+    totalQuantity: 'Quantité Totale',
+  },
+
   // Reports
   reports: {
     title: 'Rapports',
@@ -486,6 +603,11 @@ export default {
     revenue: 'Revenu',
     cost: 'Coût',
     profit: 'Profit',
+    transactions: 'Transactions',
+    topProducts: 'Meilleurs Produits',
+    profitAnalysis: 'Analyse des Bénéfices',
+    sortBy: 'Trier Par',
+    rank: 'Rang',
   },
 
   // System
@@ -535,6 +657,8 @@ export default {
     failedToLoadOrderDetails: 'Échec du chargement des détails de la commande',
     deliveryNoteContentNotFound: 'Contenu du bon de livraison introuvable',
     exportedSuccessfully: 'Exporté avec succès',
-    cannotDeleteClientWithSales: 'Impossible de supprimer le client car il a des bons de vente associés',
+    cannotDeleteClientWithSales: 'Impossible de supprimer un client avec des reçus de vente existants',
+    noDataToExport: 'Aucune donnée à exporter',
+    exportCompleted: 'Exportation terminée',
   },
 };

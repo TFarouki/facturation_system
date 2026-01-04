@@ -58,7 +58,10 @@
 
       <template v-slot:body-cell-actions="props">
         <q-td :props="props">
-           <q-btn flat dense icon="payments" color="primary" @click="() => openSettlementDialog(props.row)">
+          <q-btn flat dense icon="bar_chart" color="info" @click="() => openSalesReportDialog(props.row)">
+            <q-tooltip>{{ $t('distributors.salesReport') }}</q-tooltip>
+          </q-btn>
+          <q-btn flat dense icon="payments" color="primary" @click="() => openSettlementDialog(props.row)">
             <q-tooltip>{{ $t('distributors.settlements') }}</q-tooltip>
           </q-btn>
           <q-btn flat dense icon="edit" color="positive" @click="() => openDialog(props.row)">
@@ -115,8 +118,8 @@
     </q-dialog>
 
     <!-- Settlement/Liabilities Dialog -->
-    <q-dialog v-model="showSettlementDialog" full-width>
-      <q-card>
+    <q-dialog v-model="showSettlementDialog">
+      <q-card style="width: 900px; max-width: 90vw;">
         <q-card-section class="bg-primary text-white">
           <div class="row items-center justify-between">
             <div class="text-h6">{{ $t('distributors.settlementsTitle', { name: selectedDistributorForSettlement?.name }) }}</div>
@@ -184,6 +187,23 @@
                   </q-btn>
                 </q-td>
              </template>
+             <template v-slot:bottom-row>
+                <q-tr class="bg-grey-3 text-weight-bold">
+                  <q-td colspan="3" class="text-right">
+                    {{ $t('common.total') }}
+                  </q-td>
+                  <q-td class="text-right">
+                    {{ unpaidSalesTotals.total.toFixed(2) }}
+                  </q-td>
+                  <q-td class="text-right">
+                    {{ unpaidSalesTotals.paid.toFixed(2) }}
+                  </q-td>
+                   <q-td class="text-right text-negative">
+                    {{ unpaidSalesTotals.remaining.toFixed(2) }}
+                  </q-td>
+                  <q-td></q-td>
+                </q-tr>
+             </template>
            </q-table>
 
         </q-card-section>
@@ -198,7 +218,7 @@
             </q-card-section>
             <q-card-section>
                 <div class="text-subtitle2 q-mb-sm">{{ $t('sales.client') }}: {{ selectedReceipt?.client?.name }}</div>
-                <div class="text-subtitle2 q-mb-md">{{ $t('common.date') }}: {{ selectedReceipt?.receipt_date }}</div>
+                <div class="text-subtitle2 q-mb-md">{{ $t('common.date') }}: {{ formatDate(selectedReceipt?.receipt_date) }}</div>
                 
                 <q-markup-table flat bordered dense>
                     <thead>
@@ -206,26 +226,133 @@
                             <th class="text-left">{{ $t('products.product') }}</th>
                             <th class="text-right">{{ $t('sales.quantity') }}</th>
                             <th class="text-right">{{ $t('products.price') }}</th>
+                            <th class="text-right">{{ $t('inventory.cmup') }}</th>
                             <th class="text-right">{{ $t('common.total') }}</th>
+                            <th class="text-right">{{ $t('inventory.cmup') }} ({{ $t('common.total') }})</th>
+                            <th class="text-right">{{ $t('reports.profit') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="item in selectedReceipt?.details" :key="item.id">
-                            <td>{{ item.product?.name }}</td>
-                            <td class="text-right">{{ item.quantity }}</td>
-                            <td class="text-right">{{ parseFloat(item.unit_price).toFixed(2) }}</td>
-                            <td class="text-right">{{ parseFloat(item.subtotal).toFixed(2) }}</td>
+                            <td>
+                                {{ item.product?.name || $t('products.unknownProduct') || 'Unknown Product' }}
+                                <div v-if="item.promo_quantity > 0" class="text-caption text-positive">
+                                    + {{ item.promo_quantity }} ({{ $t('sales.promo') }})
+                                </div>
+                            </td>
+                            <td class="text-right">{{ parseFloat(item.quantity).toFixed(2) }}</td>
+                            <td class="text-right">{{ parseFloat(item.selling_price || item.unit_price || 0).toFixed(2) }}</td>
+                            <td class="text-right text-grey-7">{{ parseFloat(item.product?.cmup || 0).toFixed(2) }}</td>
+                            <td class="text-right">{{ (parseFloat(item.quantity) * parseFloat(item.selling_price || item.unit_price || 0)).toFixed(2) }}</td>
+                            <td class="text-right text-grey-7">
+                                {{ ((parseFloat(item.quantity) + parseFloat(item.promo_quantity || 0)) * parseFloat(item.product?.cmup || 0)).toFixed(2) }}
+                            </td>
+                            <td class="text-right text-weight-bold" :class="(parseFloat(item.quantity) * parseFloat(item.selling_price || item.unit_price || 0)) - ((parseFloat(item.quantity) + parseFloat(item.promo_quantity || 0)) * parseFloat(item.product?.cmup || 0)) >= 0 ? 'text-positive' : 'text-negative'">
+                                {{ ((parseFloat(item.quantity) * parseFloat(item.selling_price || item.unit_price || 0)) - ((parseFloat(item.quantity) + parseFloat(item.promo_quantity || 0)) * parseFloat(item.product?.cmup || 0))).toFixed(2) }}
+                            </td>
                         </tr>
                     </tbody>
                 </q-markup-table>
-                 <div class="row justify-end q-mt-md text-h6">
-                    {{ $t('common.total') }}: {{ parseFloat(selectedReceipt?.total_amount).toFixed(2) }} DH
+                 <div class="row q-col-gutter-md q-mt-md justify-end">
+                    <div class="col-auto">
+                        <div class="text-subtitle2 text-grey-7">{{ $t('common.total') }}</div>
+                        <div class="text-h6">{{ parseFloat(selectedReceipt?.total_amount).toFixed(2) }} DH</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="text-subtitle2 text-grey-7">{{ $t('distributors.realizedProfit') }}</div>
+                        <div class="text-h6 text-positive">{{ parseFloat(selectedReceipt?.total_profit || calculateReceiptProfit(selectedReceipt)).toFixed(2) }} DH</div>
+                    </div>
                 </div>
             </q-card-section>
             <q-card-actions align="right">
                 <q-btn flat :label="$t('common.close')" color="primary" v-close-popup />
             </q-card-actions>
         </q-card>
+    </q-dialog>
+    
+    <!-- Sales Report Dialog -->
+    <q-dialog v-model="showSalesReportDialog">
+      <q-card style="width: 1000px; max-width: 95vw;">
+        <q-card-section class="bg-info text-white">
+          <div class="row items-center justify-between">
+            <div class="text-h6">{{ $t('distributors.salesReportTitle', { name: selectedDistributorForReport?.name }) }}</div>
+            <q-btn flat round dense icon="close" v-close-popup />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pa-md">
+          <!-- Filters -->
+          <div class="row q-col-gutter-sm items-end q-mb-md">
+            <div class="col-12 col-md-3">
+              <q-input v-model="reportFilters.start_date" type="date" :label="$t('distributors.from')" outlined dense />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-input v-model="reportFilters.end_date" type="date" :label="$t('distributors.to')" outlined dense />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-select
+                v-model="reportFilters.price_type"
+                :options="priceTypeOptions"
+                emit-value
+                map-options
+                outlined
+                dense
+                :label="$t('sales.priceType')"
+              />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-btn color="primary" icon="search" :label="$t('reports.generate')" @click="fetchSalesReport" :loading="loadingReport" class="full-width" />
+            </div>
+          </div>
+
+          <q-separator q-mb-md />
+
+          <!-- Summary Box -->
+          <div class="row items-center q-col-gutter-md q-mb-md" v-if="reportResults.sales.length > 0">
+              <div class="col-12 col-md-3">
+                  <q-card flat bordered class="bg-blue-1">
+                      <q-card-section class="q-pa-sm text-center">
+                          <div class="text-subtitle2 text-grey-7">{{ $t('distributors.totalPeriod') }}</div>
+                          <div class="text-h5 text-primary text-weight-bold">{{ parseFloat(reportResults.total_period_amount).toFixed(2) }} DH</div>
+                      </q-card-section>
+                  </q-card>
+              </div>
+              <div class="col-12 col-md-3">
+                  <q-card flat bordered class="bg-green-1">
+                      <q-card-section class="q-pa-sm text-center">
+                          <div class="text-subtitle2 text-grey-7">{{ $t('distributors.realizedProfit') }} ({{ $t('common.total') }})</div>
+                          <div class="text-h5 text-positive text-weight-bold">{{ parseFloat(reportResults.total_period_profit).toFixed(2) }} DH</div>
+                      </q-card-section>
+                  </q-card>
+              </div>
+          </div>
+
+          <!-- Results Table -->
+          <q-table
+            :rows="reportResults.sales"
+            :columns="reportColumns"
+            row-key="id"
+            :loading="loadingReport"
+            flat
+            bordered
+            :pagination="{ rowsPerPage: 10 }"
+            :no-data-label="$t('common.noData')"
+          >
+            <template v-slot:body-cell-client="props">
+              <q-td :props="props">
+                {{ props.row.client?.name || 'N/A' }}
+              </q-td>
+            </template>
+            <template v-slot:body-cell-actions="props">
+              <q-td :props="props">
+                <q-btn flat round dense color="info" icon="visibility" @click="viewReceiptDetails(props.row)">
+                  <q-tooltip>{{ $t('distributors.viewReceiptDetails') }}</q-tooltip>
+                </q-btn>
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+      </q-card>
     </q-dialog>
   </q-page>
 </template>
@@ -275,10 +402,39 @@ const unpaidStats = ref({
   sales: [] 
 });
 
+const showSalesReportDialog = ref(false);
+const loadingReport = ref(false);
+const selectedDistributorForReport = ref(null);
+const reportFilters = ref({
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0],
+    price_type: 'all'
+});
+const reportResults = ref({
+    sales: [],
+    total_period_amount: 0
+});
+
+const priceTypeOptions = computed(() => [
+    { label: t('distributors.allSales'), value: 'all' },
+    { label: t('sales.wholesale'), value: 'wholesale' },
+    { label: t('sales.semiWholesale'), value: 'semi_wholesale' },
+    { label: t('sales.retail'), value: 'retail' }
+]);
+
+const reportColumns = computed(() => [
+    { name: 'receipt_number', label: t('sales.receiptNumber'), field: 'receipt_number', align: 'left' },
+    { name: 'receipt_date', label: t('common.date'), field: 'receipt_date', align: 'left', format: val => formatDate(val) },
+    { name: 'client', label: t('sales.client'), field: 'client', align: 'left' },
+    { name: 'total_amount', label: t('common.total'), field: 'total_amount', align: 'right', format: val => parseFloat(val).toFixed(2) + ' DH' },
+    { name: 'total_profit', label: t('distributors.realizedProfit'), field: 'total_profit', align: 'right', format: val => parseFloat(val).toFixed(2) + ' DH', classes: 'text-positive text-weight-bold' },
+    { name: 'actions', label: t('common.actions'), field: 'actions', align: 'center' }
+]);
+
 const unpaidColumns = computed(() => [
     { name: 'receipt_number', label: t('distributors.receiptNumber'), field: 'receipt_number', align: 'left' },
     { name: 'client', label: t('sales.client'), field: 'client', align: 'left' },
-    { name: 'sale_date', label: t('common.date'), field: 'receipt_date', align: 'left' },
+    { name: 'sale_date', label: t('common.date'), field: 'receipt_date', align: 'left', format: val => formatDate(val) },
     { name: 'total_amount', label: t('distributors.receiptTotal'), field: 'total_amount', align: 'right', format: val => parseFloat(val).toFixed(2) },
     { name: 'paid_amount', label: t('distributors.cashCollected'), field: 'paid_amount', align: 'right', format: val => parseFloat(val).toFixed(2) },
     { name: 'remaining_amount', label: t('distributors.owedToCompany'), field: 'remaining_amount', align: 'right', format: val => parseFloat(val).toFixed(2), classes: 'text-negative text-weight-bold' },
@@ -289,6 +445,32 @@ const openSettlementDialog = async (distributor) => {
     selectedDistributorForSettlement.value = distributor;
     showSettlementDialog.value = true;
     await fetchLiabilities(distributor.id);
+};
+
+const openSalesReportDialog = (distributor) => {
+    selectedDistributorForReport.value = distributor;
+    showSalesReportDialog.value = true;
+    fetchSalesReport();
+};
+
+const fetchSalesReport = async () => {
+    if (!selectedDistributorForReport.value) return;
+    
+    loadingReport.value = true;
+    try {
+        const response = await api.get('/sales/report', {
+            params: {
+                distributor_id: selectedDistributorForReport.value.id,
+                ...reportFilters.value
+            }
+        });
+        reportResults.value = response.data;
+    } catch (error) {
+        console.error('Error fetching sales report:', error);
+        $q.notify({ type: 'negative', message: t('messages.failedToLoadData') });
+    } finally {
+        loadingReport.value = false;
+    }
 };
 
 const fetchLiabilities = async (distributorId) => {
@@ -304,9 +486,29 @@ const fetchLiabilities = async (distributorId) => {
     }
 };
 
+const unpaidSalesTotals = computed(() => {
+    if (!unpaidStats.value?.sales) return { total: 0, paid: 0, remaining: 0 };
+    
+    return unpaidStats.value.sales.reduce((acc, sale) => {
+        acc.total += parseFloat(sale.total_amount || 0);
+        acc.paid += parseFloat(sale.paid_amount || 0);
+        acc.remaining += parseFloat(sale.remaining_amount || 0);
+        return acc;
+    }, { total: 0, paid: 0, remaining: 0 });
+});
+
 const viewReceiptDetails = (receipt) => {
     selectedReceipt.value = receipt;
     showReceiptDetailsDialog.value = true;
+};
+
+const calculateReceiptProfit = (receipt) => {
+    if (!receipt || !receipt.details) return 0;
+    return receipt.details.reduce((acc, item) => {
+        const cost = (parseFloat(item.quantity) + parseFloat(item.promo_quantity || 0)) * parseFloat(item.product?.cmup || 0);
+        const revenue = parseFloat(item.quantity) * parseFloat(item.selling_price || item.unit_price || 0);
+        return acc + (revenue - cost);
+    }, 0);
 };
 
 // Computed property for filtered distributors
@@ -396,7 +598,15 @@ const deleteDistributor = async (distributor) => {
   $q.dialog({
     title: t('distributors.confirmDeleteTitle'),
     message: t('distributors.confirmDeleteMessage', { name: distributor.name }),
-    cancel: true,
+    cancel: {
+      label: t('common.cancel'),
+      flat: true
+    },
+    ok: {
+      label: t('common.ok'),
+      color: 'negative'
+    },
+    persistent: true,
   }).onOk(async () => {
     try {
       await api.delete(`/distributors/${distributor.id}`);
@@ -458,8 +668,20 @@ const exportToExcel = () => {
   }
 };
 
+
+const formatDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date; // Return original if not a valid date
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 onMounted(() => {
   loadDistributors();
+
 });
 </script>
 
